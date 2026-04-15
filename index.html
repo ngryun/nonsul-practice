@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>논술 모범답안 따라쓰기</title>
+  <style>
+    :root {
+      --bg: #f8f9fc;
+      --panel: #ffffff;
+      --line: #e5e7eb;
+      --line-strong: #d1d5db;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --accent: #4f46e5;
+      --accent-light: #eef2ff;
+      --accent-hover: #4338ca;
+      --good: #059669;
+      --good-light: #ecfdf5;
+      --good-border: #a7f3d0;
+      --bad: #dc2626;
+      --bad-light: #fef2f2;
+      --bad-border: #fecaca;
+      --retry-border: #c7d2fe;
+      --soft: #f3f4f6;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      background: var(--bg); color: var(--text);
+      font-family: "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+      line-height: 1.6;
+    }
+    .page {
+      width: min(760px, calc(100% - 40px));
+      margin: 32px auto 48px;
+    }
+    .page-header { padding: 4px 0 24px; margin-bottom: 8px; }
+    h1 {
+      margin: 0 0 8px; font-size: clamp(1.6rem,2.5vw,2rem);
+      font-weight: 800; letter-spacing: -0.02em;
+    }
+    .page-header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+    /* Source section — full-width, hidden during practice */
+    .source-section {
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      background: var(--panel); box-shadow: var(--shadow-sm);
+      padding: 24px; margin-bottom: 20px;
+    }
+    .source-section[hidden] { display: none; }
+    .source-section h2 { margin: 0 0 6px; font-size: 1.05rem; font-weight: 700; }
+    .source-section .panel-copy {
+      margin: 0 0 16px; color: var(--muted); font-size: 0.92rem; line-height: 1.6;
+    }
+
+    /* Source modal overlay */
+    .source-modal {
+      position: fixed; inset: 0; z-index: 900;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--transition-normal);
+    }
+    .source-modal[hidden] { display: none; }
+    .source-modal.visible { opacity: 1; pointer-events: auto; }
+    .source-modal-body {
+      background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+      padding: 28px; max-width: 600px; width: 92%;
+      transform: scale(0.95) translateY(12px);
+      transition: transform var(--transition-slow);
+      max-height: 80vh; overflow-y: auto;
+    }
+    .source-modal.visible .source-modal-body { transform: scale(1) translateY(0); }
+    .source-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .source-modal-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+    .source-modal-close {
+      width: 34px; height: 34px; padding: 0;
+      border: 1px solid var(--line); border-radius: var(--radius-sm);
+      background: var(--soft); color: var(--muted); cursor: pointer;
+      font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+      transition: all var(--transition-fast);
+    }
+    .source-modal-close:hover { background: var(--line); color: var(--text); transform: none; box-shadow: none; }
+    .source-modal-text {
+      white-space: pre-wrap; line-height: 1.8; font-size: 0.95rem;
+      padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-md);
+      background: var(--soft); max-height: 50vh; overflow-y: auto;
+    }
+    .source-modal-meta {
+      display: flex; gap: 16px; margin-top: 12px; color: var(--muted); font-size: 0.85rem;
+    }
+
+    /* "모범 답안 보기" trigger during practice */
+    .source-trigger {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+      background: var(--panel); color: var(--muted); cursor: pointer;
+      font: inherit; font-size: 0.85rem; font-weight: 600;
+      box-shadow: var(--shadow-sm); margin-bottom: 14px;
+      transition: all var(--transition-fast);
+    }
+    .source-trigger:hover { background: var(--soft); color: var(--text); transform: none; }
+    .source-trigger[hidden] { display: none; }
+    .source-trigger-icon { font-size: 1rem; }
+
+    /* Practice section — always full-width */
+    .practice-section {
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      background: var(--panel); box-shadow: var(--shadow-sm);
+      padding: 24px;
+    }
+
+    /* Shared */
+    label { display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 700; }
+    textarea {
+      width: 100%; border: 1.5px solid var(--line); border-radius: var(--radius-md);
+      background: #fff; color: var(--text); font: inherit; line-height: 1.65;
+      resize: vertical; transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+    #sourceText { min-height: 180px; padding: 14px 16px; }
+    #userInput { min-height: 120px; padding: 14px 16px; font-size: 1rem; }
+    .inline-note { margin-top: 8px; color: var(--muted); font-size: 0.83rem; }
+    .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    button {
+      border: 1px solid var(--line); border-radius: var(--radius-sm);
+      padding: 10px 18px; cursor: pointer; font: inherit;
+      font-size: 0.9rem; font-weight: 600; background: #fff; color: var(--text);
+      transition: all var(--transition-fast);
+    }
+    button:hover:not(:disabled) { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .button-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .button-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .button-secondary { background: var(--soft); border-color: var(--line); }
+    .button-secondary:hover:not(:disabled) { background: #e5e7eb; }
+    .button-next { background: var(--accent-light); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+    .button-next:hover:not(:disabled) { background: var(--accent); color: #fff; }
+    .button-retry { background: #fff; border-color: var(--muted); color: var(--muted); }
+    .button-retry:hover:not(:disabled) { background: var(--soft); color: var(--text); }
+
+    .meta-list { display: grid; gap: 0; margin-top: 16px; }
+    .meta-item {
+      display: flex; justify-content: space-between; align-items: baseline;
+      gap: 10px; padding: 10px 0; border-top: 1px solid var(--line);
+    }
+    .meta-item:first-child { border-top-color: var(--line-strong); }
+    .meta-item span { color: var(--muted); font-size: 0.9rem; }
+    .meta-item strong { font-size: 1rem; font-weight: 700; }
+
+    .practice-status { padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+    .status-line { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+    .status-line span {
+      padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+      background: var(--soft); font-size: 0.9rem; text-align: center;
+    }
+    .status-line strong { font-weight: 700; }
+    .timer { font-variant-numeric: tabular-nums; }
+
+    .progress-card,.sentence-card,.input-card,.feedback-card,.compare-card,.hint-card {
+      margin-bottom: 14px; border: 1px solid var(--line); border-radius: var(--radius-md);
+      background: #fff; box-shadow: var(--shadow-sm); padding: 20px;
+      transition: all var(--transition-normal);
+    }
+    .progress-header { display: flex; justify-content: space-between; gap: 10px; font-size: 0.9rem; font-weight: 600; }
+    .progress-track { height: 10px; margin-top: 12px; background: var(--soft); border-radius: 100px; overflow: hidden; }
+    .progress-fill { width: 0; height: 100%; background: linear-gradient(90deg,var(--accent),#818cf8); border-radius: 100px; transition: width var(--transition-slow); }
+    .section-label { display: block; margin-bottom: 10px; color: var(--muted); font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .target-sentence {
+      margin: 0; font-family: "AppleMyungjo","Nanum Myeongjo","Noto Serif CJK KR",serif;
+      font-size: 1.35rem; line-height: 1.85;
+      border-left: 3px solid var(--accent); padding-left: 16px;
+    }
+
+    /* Sentence memorize state */
+    .sentence-card.memorize .target-sentence {
+      filter: blur(8px); user-select: none; pointer-events: none;
+      transition: filter var(--transition-normal);
+    }
+    .sentence-card .memorize-btn { margin-top: 14px; }
+    .sentence-card .memorize-msg { display: block; margin-top: 10px; color: var(--muted); font-size: 0.85rem; }
+    .sentence-card.memorize .memorize-msg { color: var(--accent); font-weight: 600; }
+
+    /* Hint card */
+    .hint-card { border: 1.5px dashed var(--accent); background: var(--accent-light); box-shadow: none; }
+    .hint-card[hidden] { display: none; }
+    .hint-text { margin: 0; font-family: "AppleMyungjo","Nanum Myeongjo","Noto Serif CJK KR",serif; font-size: 1.15rem; line-height: 1.8; letter-spacing: 0.03em; word-break: break-all; }
+    .hint-level { display: inline-block; margin-top: 8px; font-size: 0.82rem; color: var(--muted); }
+
+    /* Feedback card */
+    .feedback-card { min-height: 90px; display: flex; align-items: flex-start; gap: 14px; border-color: var(--line); }
+    .feedback-icon { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; background: var(--soft); color: var(--muted); }
+    .feedback-body { flex: 1; min-width: 0; }
+    .feedback-card.good { background: var(--good-light); border-color: var(--good-border); }
+    .feedback-card.good .feedback-icon { background: var(--good-border); color: var(--good); }
+    .feedback-card.bad { background: var(--bad-light); border-color: var(--bad-border); }
+    .feedback-card.bad .feedback-icon { background: var(--bad-border); color: var(--bad); }
+    .feedback-card.retry { background: var(--accent-light); border-color: var(--retry-border); }
+    .feedback-card.retry .feedback-icon { background: var(--retry-border); color: var(--accent); }
+    .feedback-title { margin: 0 0 4px; font-size: 1rem; font-weight: 700; }
+    .feedback-text { margin: 0; color: var(--muted); line-height: 1.6; font-size: 0.93rem; }
+
+    .compare-card[hidden] { display: none; }
+    .compare-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+    .compare-box { padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--soft); }
+    .compare-box h3 { margin: 0 0 10px; font-size: 0.92rem; font-weight: 700; }
+    .diff-line { min-height: 64px; line-height: 1.8; word-break: break-word; font-size: 0.96rem; }
+    .diff-char { display: inline-block; min-width: 0.7ch; }
+    .diff-char.wrong { background: var(--bad-border); color: var(--bad); font-weight: 700; border-radius: 2px; }
+
+    .summary-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin-top: 16px; }
+    .summary-item { background: var(--soft); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; text-align: center; }
+    .summary-item span { display: block; color: var(--muted); font-size: 0.82rem; margin-bottom: 4px; }
+    .summary-item strong { font-size: 1.1rem; font-weight: 700; }
+    .footer-note { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+    .shortcut-hint { display: inline-block; padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--soft); font-size: 0.78rem; font-family: monospace; color: var(--muted); vertical-align: middle; }
+
+    /* Difficulty buttons */
+    .difficulty-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .difficulty-row[hidden] { display: none; }
+    .difficulty-label { font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-right: 4px; }
+    .difficulty-btn { padding: 4px 12px; font-size: 0.8rem; font-weight: 600; border: 1.5px solid var(--line); border-radius: 100px; background: #fff; cursor: pointer; transition: all var(--transition-fast); }
+    .difficulty-btn:hover:not(:disabled) { transform: none; box-shadow: none; }
+    .difficulty-btn.selected { color: #fff; }
+    .difficulty-btn[data-level="easy"] { color: var(--good); border-color: var(--good-border); }
+    .difficulty-btn[data-level="easy"]:hover,.difficulty-btn[data-level="easy"].selected { background: var(--good); color: #fff; border-color: var(--good); }
+    .difficulty-btn[data-level="normal"] { color: #92400e; border-color: #fde68a; }
+    .difficulty-btn[data-level="normal"]:hover,.difficulty-btn[data-level="normal"].selected { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+    .difficulty-btn[data-level="hard"] { color: var(--bad); border-color: var(--bad-border); }
+    .difficulty-btn[data-level="hard"]:hover,.difficulty-btn[data-level="hard"].selected { background: var(--bad); color: #fff; border-color: var(--bad); }
+
+    /* Animations */
+    @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes feedbackPop { 0% { opacity: 0; transform: scale(0.95); } 60% { transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } }
+    .animate-in { animation: fadeSlideIn var(--transition-slow) ease both; }
+    .animate-feedback { animation: feedbackPop var(--transition-normal) ease both; }
+
+    /* Celebration overlay */
+    .celebration-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity var(--transition-normal); }
+    .celebration-overlay[hidden] { display: none; }
+    .celebration-overlay.visible { opacity: 1; pointer-events: auto; }
+    .celebration-content { background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 48px 40px; text-align: center; max-width: 440px; width: 90%; transform: scale(0.9) translateY(20px); transition: transform var(--transition-slow); }
+    .celebration-overlay.visible .celebration-content { transform: scale(1) translateY(0); }
+    .celebration-icon { font-size: 4rem; margin-bottom: 12px; line-height: 1; }
+    .celebration-content h2 { margin: 0 0 8px; font-size: 1.5rem; font-weight: 800; }
+    .celebration-content > p { margin: 0 0 24px; color: var(--muted); font-size: 0.95rem; }
+    .celebration-stats { display: flex; justify-content: center; gap: 24px; margin-bottom: 28px; }
+    .celebration-stat { text-align: center; }
+    .celebration-stat-value { display: block; font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+    .celebration-stat-label { display: block; font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+    .celebration-buttons { display: flex; gap: 10px; justify-content: center; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .page { width: calc(100% - 24px); margin: 16px auto 24px; }
+      .source-section,.practice-section { padding: 18px; }
+      .target-sentence { font-size: 1.15rem; }
+      .button-row { flex-direction: column; }
+      .button-row button { width: 100%; min-height: 44px; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .summary-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .status-line { grid-template-columns: 1fr; }
+      .celebration-content { padding: 32px 24px; width: 95%; }
+      .source-modal-body { padding: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *,*::before,*::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <h1>논술 따라쓰기 연습</h1>
+      <p>모범답안을 붙여넣으면 문장 단위로 나눕니다. 한 문장씩 읽고 기억한 뒤, 가려진 상태에서 써보세요.</p>
+    </header>
+
+    <!-- 연습 전: 모범답안 입력 영역 (전체 너비) -->
+    <section class="source-section" id="sourceSection">
+      <h2>모범 답안</h2>
+      <p class="panel-copy">답안을 그대로 붙여넣고 시작하세요. 마침표, 물음표, 느낌표, 줄바꿈을 기준으로 문장을 나눕니다.</p>
+      <label for="sourceText">모범 답안</label>
+      <textarea id="sourceText" placeholder="여기에 모범 답안을 붙여넣으세요.&#10;&#10;예) 국가는 개인의 자유를 보장해야 한다.&#10;그러나 자유는 공동체의 책임과 분리될 수 없다."></textarea>
+      <p class="inline-note">구두점(마침표, 쉼표 등)은 채점에서 제외됩니다.</p>
+      <div class="button-row">
+        <button id="startButton" class="button-primary">연습 시작</button>
+      </div>
+      <div class="meta-list">
+        <div class="meta-item">
+          <span>자동 분리 문장 수</span>
+          <strong id="sentenceCount">0문장</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- 연습 중: "모범 답안 보기" 버튼 -->
+    <button id="sourceTrigger" class="source-trigger" hidden>
+      <span class="source-trigger-icon">&#128196;</span> 모범 답안 보기
+    </button>
+
+    <!-- 연습 영역 (항상 전체 너비) -->
+    <section class="practice-section">
+      <div class="practice-status">
+        <div class="status-line">
+          <span>라운드 <strong id="roundNumber">-</strong></span>
+          <span>완료 <strong id="masteredCount">0 / 0</strong></span>
+          <span>경과 <strong id="timerDisplay" class="timer">00:00</strong></span>
+        </div>
+      </div>
+
+      <div class="progress-card">
+        <div class="progress-header">
+          <span id="progressLabel">준비가 끝나면 연습을 시작하세요.</span>
+          <span id="progressSubLabel">현재 라운드 0 / 0</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="sentence-card animate-in" id="sentenceCard">
+        <span class="section-label">제시 문장</span>
+        <p id="targetSentence" class="target-sentence">연습을 시작하면 한 문장씩 여기에 표시됩니다.</p>
+        <span id="memorizeMsg" class="memorize-msg"></span>
+        <button id="memorizeBtn" class="button-primary memorize-btn" hidden>다 읽었어요 — 가리고 쓰기</button>
+      </div>
+
+      <div id="hintDisplay" class="hint-card" hidden>
+        <span class="section-label">힌트</span>
+        <p id="hintText" class="hint-text"></p>
+        <span id="hintLevel" class="hint-level"></span>
+      </div>
+
+      <div class="input-card">
+        <label for="userInput">그대로 입력하기 <span class="shortcut-hint">Ctrl+Enter</span> 채점</label>
+        <textarea id="userInput" placeholder="현재 문장을 그대로 입력하세요." disabled></textarea>
+        <div class="button-row">
+          <button id="checkButton" class="button-primary" disabled>채점하기</button>
+          <button id="retryButton" class="button-retry" disabled>다시 쓰기</button>
+          <button id="nextButton" class="button-next" disabled>다음 문장 &rarr;</button>
+          <button id="hintButton" class="button-secondary" disabled>힌트 보기</button>
+        </div>
+      </div>
+
+      <div id="feedbackCard" class="feedback-card">
+        <div class="feedback-icon" id="feedbackIcon">&#128221;</div>
+        <div class="feedback-body">
+          <h3 id="feedbackTitle" class="feedback-title">아직 시작 전입니다.</h3>
+          <p id="feedbackText" class="feedback-text">위에 모범 답안을 붙여넣고 연습을 시작하면, 한 문장씩 읽고 기억해서 쓸 수 있습니다.</p>
+          <div id="difficultyRow" class="difficulty-row" hidden>
+            <span class="difficulty-label">이 문장은?</span>
+            <button class="difficulty-btn" data-level="easy" type="button">쉬움</button>
+            <button class="difficulty-btn" data-level="normal" type="button">보통</button>
+            <button class="difficulty-btn" data-level="hard" type="button">어려움</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="compareCard" class="compare-card" hidden>
+        <span class="section-label">비교</span>
+        <div class="compare-grid">
+          <div class="compare-box"><h3>모범 문장</h3><div id="expectedDiff" class="diff-line"></div></div>
+          <div class="compare-box"><h3>입력 문장</h3><div id="actualDiff" class="diff-line"></div></div>
+        </div>
+      </div>
+
+      <div class="summary-strip">
+        <div class="summary-item"><span>전체 문장</span><strong id="totalCount">0</strong></div>
+        <div class="summary-item"><span>정답 횟수</span><strong id="correctCount">0</strong></div>
+        <div class="summary-item"><span>오답 횟수</span><strong id="wrongCount">0</strong></div>
+        <div class="summary-item"><span>총 시도 수</span><strong id="attemptCount">0</strong></div>
+        <div class="summary-item"><span>쉬움</span><strong id="easyCount">0</strong></div>
+        <div class="summary-item"><span>보통</span><strong id="normalCount">0</strong></div>
+        <div class="summary-item"><span>어려움</span><strong id="hardCount">0</strong></div>
+        <div class="summary-item"><span>평균 유사도</span><strong id="avgSimilarity">-</strong></div>
+      </div>
+
+      <div class="footer-note">
+        <button id="restartButton" class="button-secondary" disabled style="margin-right:8px">처음부터 다시</button>
+        이 파일 하나만 열면 바로 연습할 수 있습니다.
+      </div>
+    </section>
+  </div>
+
+  <!-- 모범 답안 모달 -->
+  <div id="sourceModal" class="source-modal" hidden>
+    <div class="source-modal-body">
+      <div class="source-modal-header">
+        <h2>모범 답안</h2>
+        <button id="sourceModalClose" class="source-modal-close" type="button">&times;</button>
+      </div>
+      <div id="sourceModalText" class="source-modal-text"></div>
+      <div class="source-modal-meta">
+        <span>총 <strong id="sourceModalCount">0</strong>문장</span>
+        <span>오답 대기 <strong id="sourceModalRetry">0</strong>문장</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 축하 오버레이 -->
+  <div id="celebrationOverlay" class="celebration-overlay" hidden>
+    <div class="celebration-content">
+      <div class="celebration-icon">&#127881;</div>
+      <h2>축하합니다!</h2>
+      <p>모든 문장을 완벽하게 따라 썼습니다.</p>
+      <div id="celebrationStats" class="celebration-stats"></div>
+      <div class="celebration-buttons">
+        <button id="celebrationRestart" class="button-primary">다시 연습하기</button>
+        <button id="celebrationClose" class="button-secondary">결과 확인</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var $ = function(id) { return document.getElementById(id); };
+    var elements = {
+      sourceText: $("sourceText"), sourceSection: $("sourceSection"),
+      sourceTrigger: $("sourceTrigger"),
+      sourceModal: $("sourceModal"), sourceModalClose: $("sourceModalClose"),
+      sourceModalText: $("sourceModalText"), sourceModalCount: $("sourceModalCount"),
+      sourceModalRetry: $("sourceModalRetry"),
+      startButton: $("startButton"), restartButton: $("restartButton"),
+      sentenceCount: $("sentenceCount"),
+      roundNumber: $("roundNumber"), masteredCount: $("masteredCount"),
+      timerDisplay: $("timerDisplay"),
+      progressLabel: $("progressLabel"), progressSubLabel: $("progressSubLabel"),
+      progressFill: $("progressFill"),
+      sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
+      memorizeBtn: $("memorizeBtn"), memorizeMsg: $("memorizeMsg"),
+      userInput: $("userInput"),
+      checkButton: $("checkButton"), retryButton: $("retryButton"),
+      nextButton: $("nextButton"), hintButton: $("hintButton"),
+      hintDisplay: $("hintDisplay"), hintText: $("hintText"), hintLevel: $("hintLevel"),
+      feedbackCard: $("feedbackCard"), feedbackIcon: $("feedbackIcon"),
+      feedbackTitle: $("feedbackTitle"), feedbackText: $("feedbackText"),
+      difficultyRow: $("difficultyRow"),
+      compareCard: $("compareCard"), expectedDiff: $("expectedDiff"), actualDiff: $("actualDiff"),
+      totalCount: $("totalCount"), correctCount: $("correctCount"),
+      wrongCount: $("wrongCount"), attemptCount: $("attemptCount"),
+      easyCount: $("easyCount"), normalCount: $("normalCount"),
+      hardCount: $("hardCount"), avgSimilarity: $("avgSimilarity"),
+      celebrationOverlay: $("celebrationOverlay"), celebrationStats: $("celebrationStats"),
+      celebrationRestart: $("celebrationRestart"), celebrationClose: $("celebrationClose")
+    };
+
+    var state = {
+      sourceSentences: [], currentQueue: [], retryQueue: [],
+      currentIndex: 0, round: 1,
+      totalAttempts: 0, correctAttempts: 0, wrongAttempts: 0,
+      solvedIds: new Set(), startedAt: null, timerId: null,
+      active: false, waitingForNext: false, hintLevel: 0,
+      difficultyMap: {}, similarityLog: []
+    };
+
+    function splitIntoSentences(text) {
+      var cleaned = text.replace(/\r\n/g,"\n").replace(/\u00a0/g," ").trim();
+      if (!cleaned) return [];
+      return cleaned.split(/\n+/).map(function(l){return l.trim()}).filter(Boolean)
+        .flatMap(function(line) {
+          var m = line.match(/[^.!?。！？\n]+[.!?。！？…]?["'"')\]]*/g) || [];
+          return m.map(function(s){return s.replace(/\s+/g," ").trim()}).filter(Boolean);
+        });
+    }
+    function normalizeForCompare(t) { return t.replace(/\s+/g," ").trim(); }
+    function normalizeForGrading(t) {
+      return t.replace(/[.,;:!?·…'"'""\-–—()（）\[\]「」『』《》〈〉]/g,"").replace(/\s+/g," ").trim();
+    }
+    function levenshteinDistance(a,b) {
+      var ac=Array.from(a),bc=Array.from(b),al=ac.length,bl=bc.length;
+      if(!al)return bl; if(!bl)return al;
+      var prev=[],curr=[];
+      for(var j=0;j<=bl;j++)prev[j]=j;
+      for(var i=1;i<=al;i++){curr[0]=i;for(var j2=1;j2<=bl;j2++){var c=ac[i-1]===bc[j2-1]?0:1;curr[j2]=Math.min(prev[j2]+1,curr[j2-1]+1,prev[j2-1]+c);}var t=prev;prev=curr;curr=t;}
+      return prev[bl];
+    }
+    function calculateSimilarity(a,b) {
+      var m=Math.max(Array.from(a).length,Array.from(b).length);
+      return m===0?100:Math.round((1-levenshteinDistance(a,b)/m)*100);
+    }
+    function formatElapsed(ms) {
+      var s=Math.max(0,Math.floor(ms/1000));
+      return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+    }
+
+    function refreshSourceMeta() {
+      var n = splitIntoSentences(elements.sourceText.value).length;
+      elements.sentenceCount.textContent = n + "문장";
+      elements.startButton.disabled = n === 0;
+    }
+    function refreshStats() {
+      elements.totalCount.textContent = String(state.sourceSentences.length);
+      elements.correctCount.textContent = String(state.correctAttempts);
+      elements.wrongCount.textContent = String(state.wrongAttempts);
+      elements.attemptCount.textContent = String(state.totalAttempts);
+      elements.roundNumber.textContent = state.sourceSentences.length ? String(state.round) : "-";
+      elements.masteredCount.textContent = state.solvedIds.size + " / " + state.sourceSentences.length;
+      var easy=0,normal=0,hard=0;
+      for(var k in state.difficultyMap){var v=state.difficultyMap[k];if(v==="easy")easy++;else if(v==="normal")normal++;else if(v==="hard")hard++;}
+      elements.easyCount.textContent=String(easy);elements.normalCount.textContent=String(normal);elements.hardCount.textContent=String(hard);
+      if(state.similarityLog.length>0){var avg=Math.round(state.similarityLog.reduce(function(a,b){return a+b},0)/state.similarityLog.length);elements.avgSimilarity.textContent=avg+"%";}
+      else{elements.avgSimilarity.textContent="-";}
+    }
+    function refreshProgress() {
+      var rl=state.currentQueue.length,cs=rl?Math.min(state.currentIndex+1,rl):0;
+      elements.progressFill.style.width=(rl?(state.currentIndex/rl)*100:0)+"%";
+      if(!state.active){elements.progressLabel.textContent="준비가 끝나면 연습을 시작하세요.";elements.progressSubLabel.textContent="현재 라운드 0 / 0";return;}
+      if(!rl){elements.progressLabel.textContent="연습이 마무리되었습니다.";elements.progressSubLabel.textContent="현재 라운드 0 / 0";return;}
+      elements.progressLabel.textContent="현재 문장에 집중해서 그대로 입력해보세요.";
+      elements.progressSubLabel.textContent="현재 라운드 "+cs+" / "+rl;
+    }
+    function setFeedback(title,text,tone,icon) {
+      elements.feedbackCard.className="feedback-card animate-feedback"+(tone?" "+tone:"");
+      elements.feedbackTitle.textContent=title;elements.feedbackText.textContent=text;
+      elements.feedbackIcon.innerHTML=icon||"&#128221;";
+    }
+    function stopTimer(){if(state.timerId){clearInterval(state.timerId);state.timerId=null;}}
+    function startTimer(){stopTimer();elements.timerDisplay.textContent="00:00";state.timerId=setInterval(function(){if(state.startedAt)elements.timerDisplay.textContent=formatElapsed(Date.now()-state.startedAt);},250);}
+
+    function showComparison(expected,actual) {
+      elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();
+      var ec=Array.from(expected),ac=Array.from(actual),ml=Math.max(ec.length,ac.length);
+      var ef=document.createDocumentFragment(),af=document.createDocumentFragment();
+      for(var i=0;i<ml;i++){var e=ec[i]||"",a=ac[i]||"",m=e===a;ef.appendChild(diffSpan(e,m));af.appendChild(diffSpan(a,m));}
+      elements.expectedDiff.appendChild(ef);elements.actualDiff.appendChild(af);elements.compareCard.hidden=false;
+    }
+    function hideComparison(){elements.compareCard.hidden=true;elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();}
+    function diffSpan(ch,ok){var s=document.createElement("span");s.className="diff-char "+(ok?"match":"wrong");s.textContent=ch===""?"\u2205":ch===" "?"\u00b7":ch;return s;}
+    function getFirstMismatch(a,b){var ac=Array.from(a),bc=Array.from(b);for(var i=0;i<Math.max(ac.length,bc.length);i++){if((ac[i]||"")!==(bc[i]||""))return i;}return -1;}
+
+    // Source modal
+    function showSourceModal() {
+      elements.sourceModalText.textContent = elements.sourceText.value;
+      elements.sourceModalCount.textContent = String(state.sourceSentences.length);
+      elements.sourceModalRetry.textContent = String(state.retryQueue.length);
+      elements.sourceModal.hidden = false;
+      requestAnimationFrame(function(){elements.sourceModal.classList.add("visible");});
+    }
+    function hideSourceModal() {
+      elements.sourceModal.classList.remove("visible");
+      setTimeout(function(){elements.sourceModal.hidden=true;},300);
+    }
+
+    // Difficulty
+    function showDifficultyRow(sid){
+      elements.difficultyRow.hidden=false;
+      var cur=state.difficultyMap[sid]||null;
+      elements.difficultyRow.querySelectorAll(".difficulty-btn").forEach(function(b){b.classList.toggle("selected",b.getAttribute("data-level")===cur);});
+    }
+    function hideDifficultyRow(){elements.difficultyRow.hidden=true;}
+    function setDifficulty(sid,level){
+      state.difficultyMap[sid]=level;
+      elements.difficultyRow.querySelectorAll(".difficulty-btn").forEach(function(b){b.classList.toggle("selected",b.getAttribute("data-level")===level);});
+      refreshStats();
+    }
+
+    // Memorize flow
+    function hideAndWrite(){
+      if(!state.active)return;
+      elements.sentenceCard.classList.add("memorize");
+      elements.memorizeBtn.hidden=true;
+      elements.memorizeMsg.textContent="문장이 가려졌습니다. 기억해서 써보세요!";
+      elements.userInput.disabled=false;elements.checkButton.disabled=false;elements.hintButton.disabled=false;
+      elements.userInput.focus();
+    }
+    function revealSentence(){elements.sentenceCard.classList.remove("memorize");elements.memorizeBtn.hidden=true;elements.memorizeMsg.textContent="";}
+    function hideHint(){state.hintLevel=0;elements.hintDisplay.hidden=true;elements.hintText.textContent="";elements.hintLevel.textContent="";}
+    function showHint(){
+      if(!state.active)return;var cur=state.currentQueue[state.currentIndex];if(!cur)return;
+      var ch=Array.from(cur.text),step=Math.max(1,Math.ceil(ch.length*0.15));
+      state.hintLevel=Math.min(state.hintLevel+step,ch.length);
+      elements.hintText.textContent=ch.slice(0,state.hintLevel).join("")+ch.slice(state.hintLevel).map(function(c){return c===" "?" ":"_"}).join("");
+      elements.hintDisplay.hidden=false;
+      elements.hintLevel.textContent="("+state.hintLevel+"/"+ch.length+"자 공개)";
+      if(state.hintLevel>=ch.length)elements.hintButton.disabled=true;
+    }
+
+    function retryCurrentSentence(){
+      if(!state.active)return;
+      state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
+      hideDifficultyRow();hideComparison();hideHint();state.hintLevel=0;
+      elements.userInput.value="";revealSentence();
+      elements.memorizeBtn.hidden=false;
+      elements.memorizeMsg.textContent="문장을 다시 읽은 뒤 가리고 써보세요.";
+      elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
+      elements.memorizeBtn.focus();
+      setFeedback("다시 도전하세요.","같은 문장을 다시 읽고 기억해서 써보세요.","","&#9999;&#65039;");
+    }
+    function moveToNextSentence(){
+      state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
+      hideDifficultyRow();state.currentIndex+=1;renderCurrentSentence();
+    }
+    function renderCurrentSentence(){
+      state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
+      hideDifficultyRow();hideHint();
+      if(!state.active){
+        elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
+        elements.targetSentence.textContent="연습을 시작하면 한 문장씩 여기에 표시됩니다.";
+        elements.memorizeBtn.hidden=true;elements.memorizeMsg.textContent="";
+        refreshProgress();refreshStats();return;
+      }
+      if(state.currentIndex>=state.currentQueue.length){
+        if(state.retryQueue.length>0){
+          state.currentQueue=state.retryQueue.slice();state.retryQueue=[];state.currentIndex=0;state.round+=1;
+          setFeedback("오답 문장을 다시 시작합니다.","이전 라운드에서 틀린 문장만 다시 보여줍니다.","retry","&#128260;");
+          hideComparison();refreshStats();refreshProgress();
+        }else{finishPractice();return;}
+      }
+      var cur=state.currentQueue[state.currentIndex];
+      elements.targetSentence.textContent=cur.text;
+      elements.sentenceCard.classList.remove("animate-in","memorize");
+      void elements.sentenceCard.offsetWidth;elements.sentenceCard.classList.add("animate-in");
+      elements.memorizeBtn.hidden=false;
+      elements.memorizeMsg.textContent="문장을 읽은 뒤 아래 버튼을 눌러 가리고 쓰세요.";
+      elements.userInput.value="";elements.userInput.disabled=true;
+      elements.checkButton.disabled=true;elements.hintButton.disabled=true;
+      elements.memorizeBtn.focus();refreshProgress();refreshStats();
+    }
+    function finishPractice(){
+      state.active=false;stopTimer();
+      elements.userInput.disabled=true;elements.checkButton.disabled=true;
+      elements.nextButton.disabled=true;elements.retryButton.disabled=true;elements.hintButton.disabled=true;
+      hideDifficultyRow();elements.memorizeBtn.hidden=true;elements.memorizeMsg.textContent="";
+      elements.progressFill.style.width="100%";
+      elements.progressLabel.textContent="연습이 끝났습니다.";
+      elements.progressSubLabel.textContent="전체 문장을 모두 통과했습니다.";
+      elements.targetSentence.textContent="모든 문장을 끝냈습니다.";
+      elements.sentenceCard.classList.remove("memorize");
+      setFeedback("완료했습니다.","틀린 문장까지 모두 통과했습니다.","good","&#9989;");
+      hideComparison();hideHint();refreshStats();
+      // 모범답안 영역 다시 표시
+      elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;
+      showCelebration();
+    }
+    function startPractice(){
+      var sentences=splitIntoSentences(elements.sourceText.value);
+      if(!sentences.length){alert("먼저 모범 답안을 붙여넣어 주세요.");return;}
+      stopTimer();hideCelebration();
+      state.sourceSentences=sentences.map(function(t,i){return{id:i+1,text:t}});
+      state.currentQueue=state.sourceSentences.slice();state.retryQueue=[];
+      state.currentIndex=0;state.round=1;state.totalAttempts=0;state.correctAttempts=0;state.wrongAttempts=0;
+      state.solvedIds=new Set();state.startedAt=Date.now();state.active=true;
+      state.waitingForNext=false;state.hintLevel=0;state.difficultyMap={};state.similarityLog=[];
+      elements.restartButton.disabled=false;elements.timerDisplay.textContent="00:00";
+      startTimer();hideComparison();hideHint();
+      setFeedback("연습을 시작합니다.","한 문장씩 읽고 기억한 뒤 써보세요.","","&#128640;");
+      // 모범답안 영역 숨기고 트리거 버튼 표시
+      elements.sourceSection.hidden=true;elements.sourceTrigger.hidden=false;
+      renderCurrentSentence();
+    }
+    function submitAnswer(){
+      if(!state.active||state.waitingForNext)return;
+      var cur=state.currentQueue[state.currentIndex];
+      var raw=elements.userInput.value;
+      var ne=normalizeForCompare(cur.text),na=normalizeForCompare(raw);
+      if(!na.trim()){setFeedback("입력이 비어 있습니다.","현재 문장을 먼저 입력한 뒤 채점하세요.","bad","&#9888;&#65039;");hideComparison();return;}
+      state.totalAttempts+=1;elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
+      revealSentence();
+      var ge=normalizeForGrading(cur.text),ga=normalizeForGrading(raw);
+      var sim=calculateSimilarity(ge,ga);state.similarityLog.push(sim);
+      var exact=(ga===ge),close=(sim>=90);
+      if(exact){
+        state.correctAttempts+=1;state.solvedIds.add(cur.id);
+        setFeedback("완벽한 정답입니다!","100% 일치합니다.","good","&#10004;&#65039;");
+        hideComparison();hideHint();
+      }else if(close){
+        state.correctAttempts+=1;state.solvedIds.add(cur.id);
+        setFeedback("거의 정답입니다! ("+sim+"% 일치)","약간의 차이가 있지만 통과입니다.","good","&#128079;");
+        showComparison(ne,na);hideHint();
+      }else{
+        state.wrongAttempts+=1;state.retryQueue.push(cur);
+        var mi=getFirstMismatch(ne,na);
+        var msg=sim+"% 일치. "+(mi>=0?"첫 불일치는 "+(mi+1)+"번째 글자 근처입니다.":"문장을 다시 확인해 보세요.");
+        setFeedback("오답입니다. ("+sim+"% 일치)",msg,"bad","&#10060;");
+        showComparison(ne,na);
+      }
+      refreshStats();refreshProgress();
+      state.waitingForNext=true;elements.nextButton.disabled=false;elements.retryButton.disabled=false;
+      showDifficultyRow(cur.id);elements.nextButton.focus();
+    }
+
+    function showCelebration(){
+      var el=state.startedAt?formatElapsed(Date.now()-state.startedAt):"00:00";
+      var avg=state.similarityLog.length>0?Math.round(state.similarityLog.reduce(function(a,b){return a+b},0)/state.similarityLog.length):0;
+      var hc=0;for(var k in state.difficultyMap)if(state.difficultyMap[k]==="hard")hc++;
+      elements.celebrationStats.innerHTML=
+        '<div class="celebration-stat"><span class="celebration-stat-value">'+state.sourceSentences.length+'</span><span class="celebration-stat-label">총 문장</span></div>'+
+        '<div class="celebration-stat"><span class="celebration-stat-value">'+avg+'%</span><span class="celebration-stat-label">평균 유사도</span></div>'+
+        '<div class="celebration-stat"><span class="celebration-stat-value">'+el+'</span><span class="celebration-stat-label">소요 시간</span></div>'+
+        (hc>0?'<div class="celebration-stat"><span class="celebration-stat-value">'+hc+'</span><span class="celebration-stat-label">어려운 문장</span></div>':'');
+      elements.celebrationOverlay.hidden=false;
+      requestAnimationFrame(function(){elements.celebrationOverlay.classList.add("visible");});
+    }
+    function hideCelebration(){elements.celebrationOverlay.classList.remove("visible");setTimeout(function(){elements.celebrationOverlay.hidden=true;},300);}
+
+    // Events
+    elements.sourceText.addEventListener("input",refreshSourceMeta);
+    elements.startButton.addEventListener("click",startPractice);
+    elements.restartButton.addEventListener("click",function(){elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;startPractice();});
+    elements.memorizeBtn.addEventListener("click",hideAndWrite);
+    elements.checkButton.addEventListener("click",submitAnswer);
+    elements.retryButton.addEventListener("click",retryCurrentSentence);
+    elements.nextButton.addEventListener("click",moveToNextSentence);
+    elements.hintButton.addEventListener("click",showHint);
+    elements.sourceTrigger.addEventListener("click",showSourceModal);
+    elements.sourceModalClose.addEventListener("click",hideSourceModal);
+    elements.sourceModal.addEventListener("click",function(e){if(e.target===elements.sourceModal)hideSourceModal();});
+    elements.difficultyRow.addEventListener("click",function(e){var b=e.target.closest(".difficulty-btn");if(!b)return;var cur=state.currentQueue[state.currentIndex];if(cur)setDifficulty(cur.id,b.getAttribute("data-level"));});
+    elements.celebrationRestart.addEventListener("click",function(){hideCelebration();startPractice();});
+    elements.celebrationClose.addEventListener("click",hideCelebration);
+    elements.userInput.addEventListener("keydown",function(e){
+      if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();if(!state.waitingForNext)submitAnswer();else moveToNextSentence();return;}
+      if(e.key==="Enter"&&!e.shiftKey&&state.waitingForNext){e.preventDefault();moveToNextSentence();}
+    });
+
+    refreshSourceMeta();refreshStats();refreshProgress();
+  </script>
+</body>
+</html>

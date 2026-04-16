@@ -297,8 +297,10 @@
     .compare-box { padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--soft); }
     .compare-box h3 { margin: 0 0 10px; font-size: 0.9rem; font-weight: 700; }
     .diff-line { min-height: 64px; line-height: 1.8; word-break: break-word; font-size: 0.96rem; }
-    .diff-char { display: inline-block; min-width: 0.7ch; }
-    .diff-char.wrong { background: var(--bad-border); color: var(--bad); font-weight: 700; border-radius: 3px; }
+    .diff-char { display: inline-block; min-width: 0.7ch; padding: 0 1px; border-radius: 3px; }
+    .diff-char.wrong { background: var(--bad-border); color: var(--bad); font-weight: 700; }
+    .diff-char.gap { background: rgba(212,132,154,0.08); color: var(--muted); font-weight: 600; }
+    .compare-note { margin-top: 10px; color: var(--muted); font-size: 0.82rem; }
 
     .summary-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin-top: 16px; }
     .summary-item {
@@ -483,6 +485,7 @@
           <div class="compare-box"><h3>모범 문장</h3><div id="expectedDiff" class="diff-line"></div></div>
           <div class="compare-box"><h3>입력 문장</h3><div id="actualDiff" class="diff-line"></div></div>
         </div>
+        <p class="compare-note">빠진 글자는 <strong>∅</strong>로 표시됩니다.</p>
       </div>
 
       <div class="summary-strip">
@@ -817,13 +820,63 @@
 
     function showComparison(expected,actual) {
       elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();
-      var ec=Array.from(expected),ac=Array.from(actual),ml=Math.max(ec.length,ac.length);
+      var diff=buildAlignedDiff(expected,actual);
       var ef=document.createDocumentFragment(),af=document.createDocumentFragment();
-      for(var i=0;i<ml;i++){var e=ec[i]||"",a=ac[i]||"",m=e===a;ef.appendChild(diffSpan(e,m));af.appendChild(diffSpan(a,m));}
+      diff.forEach(function(part){
+        ef.appendChild(diffSpan(part.expected,part.expectedState));
+        af.appendChild(diffSpan(part.actual,part.actualState));
+      });
       elements.expectedDiff.appendChild(ef);elements.actualDiff.appendChild(af);elements.compareCard.hidden=false;
     }
     function hideComparison(){elements.compareCard.hidden=true;elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();}
-    function diffSpan(ch,ok){var s=document.createElement("span");s.className="diff-char "+(ok?"match":"wrong");s.textContent=ch===""?"\u2205":ch===" "?"\u00b7":ch;return s;}
+    function buildAlignedDiff(expected,actual){
+      var ec=Array.from(expected),ac=Array.from(actual);
+      var rows=ec.length+1,cols=ac.length+1;
+      var dp=new Array(rows);
+      for(var i=0;i<rows;i++){dp[i]=new Array(cols);dp[i][0]=i;}
+      for(var j=0;j<cols;j++)dp[0][j]=j;
+      for(var r=1;r<rows;r++){
+        for(var c=1;c<cols;c++){
+          if(ec[r-1]===ac[c-1])dp[r][c]=dp[r-1][c-1];
+          else dp[r][c]=Math.min(dp[r-1][c-1],dp[r-1][c],dp[r][c-1])+1;
+        }
+      }
+      var parts=[],x=ec.length,y=ac.length;
+      while(x>0||y>0){
+        if(x>0&&y>0&&ec[x-1]===ac[y-1]&&dp[x][y]===dp[x-1][y-1]){
+          parts.push({expected:ec[x-1],actual:ac[y-1],expectedState:"match",actualState:"match"});
+          x-=1;y-=1;continue;
+        }
+        var canReplace=x>0&&y>0&&dp[x][y]===dp[x-1][y-1]+1;
+        var canInsert=y>0&&dp[x][y]===dp[x][y-1]+1;
+        var canDelete=x>0&&dp[x][y]===dp[x-1][y]+1;
+        if(canInsert&&x>0&&y>1&&ec[x-1]===ac[y-2]){
+          parts.push({expected:"",actual:ac[y-1],expectedState:"gap",actualState:"wrong"});
+          y-=1;continue;
+        }
+        if(canDelete&&x>1&&y>0&&ec[x-2]===ac[y-1]){
+          parts.push({expected:ec[x-1],actual:"",expectedState:"wrong",actualState:"gap"});
+          x-=1;continue;
+        }
+        if(canReplace){
+          parts.push({expected:ec[x-1],actual:ac[y-1],expectedState:"wrong",actualState:"wrong"});
+          x-=1;y-=1;continue;
+        }
+        if(canInsert){
+          parts.push({expected:"",actual:ac[y-1],expectedState:"gap",actualState:"wrong"});
+          y-=1;continue;
+        }
+        parts.push({expected:ec[x-1],actual:"",expectedState:"wrong",actualState:"gap"});
+        x-=1;
+      }
+      return parts.reverse();
+    }
+    function diffSpan(ch,state){
+      var s=document.createElement("span");
+      s.className="diff-char "+(state==="match"?"match":"wrong")+(state==="gap"?" gap":"");
+      s.textContent=ch===""?"\u2205":ch===" "?"\u00b7":ch;
+      return s;
+    }
     function getFirstMismatch(a,b){var ac=Array.from(a),bc=Array.from(b);for(var i=0;i<Math.max(ac.length,bc.length);i++){if((ac[i]||"")!==(bc[i]||""))return i;}return -1;}
 
     // Source modal

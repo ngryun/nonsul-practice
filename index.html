@@ -408,7 +408,7 @@
       <p class="panel-copy">답안을 그대로 붙여넣고 시작하세요. 마침표, 물음표, 느낌표, 줄바꿈을 기준으로 문장을 나눕니다.</p>
       <label for="sourceText">모범 답안</label>
       <textarea id="sourceText" placeholder="여기에 모범 답안을 붙여넣으세요.&#10;&#10;예) 국가는 개인의 자유를 보장해야 한다.&#10;그러나 자유는 공동체의 책임과 분리될 수 없다."></textarea>
-      <p class="inline-note">구두점(마침표, 쉼표 등)은 채점에서 제외됩니다.</p>
+      <p class="inline-note">구두점(마침표, 쉼표 등)은 채점에서 제외되며, 입력한 모범 답안은 이 브라우저에 자동 저장됩니다.</p>
       <div class="button-row">
         <button id="startButton" class="button-primary">연습 시작</button>
       </div>
@@ -765,6 +765,7 @@
       active: false, waitingForNext: false, hintLevel: 0,
       difficultyMap: {}, similarityLog: []
     };
+    var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
 
     function splitIntoSentences(text) {
       var cleaned = text.replace(/\r\n/g,"\n").replace(/\u00a0/g," ").trim();
@@ -800,6 +801,19 @@
       var n = splitIntoSentences(elements.sourceText.value).length;
       elements.sentenceCount.textContent = n + "문장";
       elements.startButton.disabled = n === 0;
+    }
+    function saveSourceDraft() {
+      try {
+        var value = elements.sourceText.value;
+        if (value.trim()) localStorage.setItem(SOURCE_DRAFT_KEY, value);
+        else localStorage.removeItem(SOURCE_DRAFT_KEY);
+      } catch (e) {}
+    }
+    function restoreSourceDraft() {
+      try {
+        var saved = localStorage.getItem(SOURCE_DRAFT_KEY);
+        if (saved) elements.sourceText.value = saved;
+      } catch (e) {}
     }
     function refreshStats() {
       elements.totalCount.textContent = String(state.sourceSentences.length);
@@ -1122,7 +1136,7 @@
     function hideCelebration(){elements.celebrationOverlay.classList.remove("visible");setTimeout(function(){elements.celebrationOverlay.hidden=true;},300);}
 
     // Events
-    elements.sourceText.addEventListener("input",refreshSourceMeta);
+    elements.sourceText.addEventListener("input",function(){saveSourceDraft();refreshSourceMeta();});
     elements.startButton.addEventListener("click",startPractice);
     elements.restartButton.addEventListener("click",function(){elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;startPractice();});
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
@@ -1144,6 +1158,7 @@
     });
     document.addEventListener("keydown",handlePracticeShortcuts);
 
+    restoreSourceDraft();
     refreshSourceMeta();refreshStats();refreshProgress();
   </script>
 </body>

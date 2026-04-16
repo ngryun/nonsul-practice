@@ -202,6 +202,7 @@
     }
     .button-secondary { background: var(--soft); border-color: var(--line); color: var(--muted); }
     .button-secondary:hover:not(:disabled) { background: var(--line); color: var(--text); }
+    .button-secondary.is-active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
     .button-next {
       background: linear-gradient(135deg, #f8dde4, #f0d4ef);
       border-color: var(--accent); color: var(--accent); font-weight: 700;
@@ -451,6 +452,7 @@
         <span id="memorizeMsg" class="memorize-msg"></span>
         <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
           <button id="prevSentenceButton" class="button-secondary" type="button">이전 문장으로 가기 <span class="shortcut-hint">&larr;</span></button>
+          <button id="readSentenceButton" class="button-secondary" type="button" aria-pressed="false">제시문장 읽기</button>
           <button id="memorizeBtn" class="button-primary memorize-btn" type="button">다 읽었어요 - 가리고 쓰기 <span class="shortcut-hint">Space</span></button>
           <button id="skipSentenceButton" class="button-secondary" type="button">다음 문장으로 가기 <span class="shortcut-hint">&rarr;</span></button>
         </div>
@@ -740,6 +742,7 @@
       sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
       sentenceActionRow: $("sentenceActionRow"),
       prevSentenceButton: $("prevSentenceButton"),
+      readSentenceButton: $("readSentenceButton"),
       memorizeBtn: $("memorizeBtn"), skipSentenceButton: $("skipSentenceButton"), memorizeMsg: $("memorizeMsg"),
       userInput: $("userInput"),
       checkButton: $("checkButton"), retryButton: $("retryButton"),
@@ -765,7 +768,14 @@
       active: false, waitingForNext: false, hintLevel: 0,
       difficultyMap: {}, similarityLog: []
     };
+    var speechState = {
+      supported: typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined",
+      voices: [],
+      activeUtterance: null,
+      speaking: false
+    };
     var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
+    var PASS_THRESHOLD = 80;
 
     function splitIntoSentences(text) {
       var cleaned = text.replace(/\r\n/g,"\n").replace(/\u00a0/g," ").trim();
@@ -827,6 +837,75 @@
       elements.easyCount.textContent=String(easy);elements.normalCount.textContent=String(normal);elements.hardCount.textContent=String(hard);
       if(state.similarityLog.length>0){var avg=Math.round(state.similarityLog.reduce(function(a,b){return a+b},0)/state.similarityLog.length);elements.avgSimilarity.textContent=avg+"%";}
       else{elements.avgSimilarity.textContent="-";}
+    }
+    function loadSpeechVoices() {
+      if (!speechState.supported) return;
+      speechState.voices = window.speechSynthesis.getVoices();
+      updateReadButtonState();
+    }
+    function pickSpeechVoice() {
+      if (!speechState.supported) return null;
+      var voices = speechState.voices.length ? speechState.voices : window.speechSynthesis.getVoices();
+      speechState.voices = voices;
+      return voices.find(function(v){return /^ko(-|_)/i.test(v.lang || "");}) ||
+             voices.find(function(v){return /korean|한국/i.test((v.name || "") + " " + (v.lang || ""));}) ||
+             null;
+    }
+    function stopSpeaking() {
+      if (!speechState.supported) return;
+      window.speechSynthesis.cancel();
+      speechState.activeUtterance = null;
+      speechState.speaking = false;
+      updateReadButtonState();
+    }
+    function updateReadButtonState() {
+      var btn = elements.readSentenceButton;
+      if (!btn) return;
+      var canRead = speechState.supported && state.active && !elements.sentenceActionRow.hidden;
+      btn.disabled = !canRead;
+      btn.classList.toggle("is-active", speechState.speaking);
+      btn.setAttribute("aria-pressed", speechState.speaking ? "true" : "false");
+      btn.textContent = speechState.supported ? (speechState.speaking ? "읽는 중 - 멈추기" : "제시문장 읽기") : "읽기 미지원";
+    }
+    function speakCurrentSentence() {
+      if (!speechState.supported) {
+        setFeedback("읽기 기능을 사용할 수 없습니다.","현재 브라우저에서 음성 읽기를 지원하지 않습니다.","bad","warning");
+        return;
+      }
+      var cur = state.currentQueue[state.currentIndex];
+      if (!cur || !cur.text) return;
+      if (speechState.speaking || window.speechSynthesis.speaking) {
+        stopSpeaking();
+        return;
+      }
+      var utterance = new SpeechSynthesisUtterance(cur.text);
+      var voice = pickSpeechVoice();
+      utterance.lang = voice && voice.lang ? voice.lang : "ko-KR";
+      if (voice) utterance.voice = voice;
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      utterance.onstart = function() {
+        speechState.activeUtterance = utterance;
+        speechState.speaking = true;
+        updateReadButtonState();
+      };
+      utterance.onend = function() {
+        if (speechState.activeUtterance !== utterance) return;
+        speechState.activeUtterance = null;
+        speechState.speaking = false;
+        updateReadButtonState();
+      };
+      utterance.onerror = function() {
+        if (speechState.activeUtterance !== utterance) return;
+        speechState.activeUtterance = null;
+        speechState.speaking = false;
+        updateReadButtonState();
+      };
+      speechState.activeUtterance = utterance;
+      speechState.speaking = true;
+      updateReadButtonState();
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
     }
     function refreshProgress() {
       var rl=state.currentQueue.length,cs=rl?Math.min(state.currentIndex+1,rl):0;
@@ -948,16 +1027,18 @@
     // Memorize flow
     function hideAndWrite(){
       if(!state.active)return;
+      stopSpeaking();
       elements.sentenceCard.classList.add("memorize");
       elements.sentenceActionRow.hidden=true;
       elements.memorizeMsg.textContent="문장이 가려졌습니다. 기억해서 써보세요!";
       elements.userInput.disabled=false;elements.checkButton.disabled=false;elements.hintButton.disabled=false;
       elements.userInput.focus();
     }
-    function revealSentence(){elements.sentenceCard.classList.remove("memorize");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";}
+    function revealSentence(){stopSpeaking();elements.sentenceCard.classList.remove("memorize");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";updateReadButtonState();}
     function refreshSentenceActionButtons(){
       elements.prevSentenceButton.disabled=state.currentIndex<=0;
       elements.skipSentenceButton.disabled=!state.active;
+      updateReadButtonState();
     }
     function hideHint(){state.hintLevel=0;elements.hintDisplay.hidden=true;elements.hintText.textContent="";elements.hintLevel.textContent="";}
     function showHint(){
@@ -998,16 +1079,19 @@
       moveToNextSentence();
     }
     function moveToNextSentence(){
+      stopSpeaking();
       state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
       hideDifficultyRow();hideComparison();state.currentIndex+=1;renderCurrentSentence();
     }
     function renderCurrentSentence(){
+      stopSpeaking();
       state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
       hideDifficultyRow();hideHint();
       if(!state.active){
         elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
         elements.targetSentence.textContent="연습을 시작하면 한 문장씩 여기에 표시됩니다.";
         elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";
+        updateReadButtonState();
         refreshProgress();refreshStats();return;
       }
       if(state.currentIndex>=state.currentQueue.length){
@@ -1029,6 +1113,7 @@
       elements.memorizeBtn.focus();refreshProgress();refreshStats();
     }
     function finishPractice(){
+      stopSpeaking();
       state.active=false;stopTimer();
       elements.userInput.disabled=true;elements.checkButton.disabled=true;
       elements.nextButton.disabled=true;elements.retryButton.disabled=true;elements.hintButton.disabled=true;
@@ -1046,6 +1131,7 @@
     function startPractice(){
       var sentences=splitIntoSentences(elements.sourceText.value);
       if(!sentences.length){alert("먼저 모범 답안을 붙여넣어 주세요.");return;}
+      stopSpeaking();
       stopTimer();hideCelebration();
       state.sourceSentences=sentences.map(function(t,i){return{id:i+1,text:t}});
       state.currentQueue=state.sourceSentences.slice();state.retryQueue=[];
@@ -1068,14 +1154,14 @@
       revealSentence();
       var ge=normalizeForGrading(cur.text),ga=normalizeForGrading(raw);
       var sim=calculateSimilarity(ge,ga);state.similarityLog.push(sim);
-      var exact=(ga===ge),close=(sim>=90);
+      var exact=(ga===ge),close=(sim>=PASS_THRESHOLD);
       if(exact){
         state.correctAttempts+=1;state.solvedIds.add(cur.id);
         setFeedback("완벽한 정답입니다!","100% 일치합니다.","good","success");
         hideComparison();hideHint();
       }else if(close){
         state.correctAttempts+=1;state.solvedIds.add(cur.id);
-        setFeedback("거의 정답입니다! ("+sim+"% 일치)","약간의 차이가 있지만 통과입니다.","good","success");
+        setFeedback("정답으로 인정합니다! ("+sim+"% 일치)","정답 기준은 "+PASS_THRESHOLD+"% 이상이며 현재 답안은 통과입니다.","good","success");
         showComparison(ne,na);hideHint();
       }else{
         state.wrongAttempts+=1;state.retryQueue.push(cur);
@@ -1140,6 +1226,7 @@
     elements.startButton.addEventListener("click",startPractice);
     elements.restartButton.addEventListener("click",function(){elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;startPractice();});
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
+    elements.readSentenceButton.addEventListener("click",speakCurrentSentence);
     elements.memorizeBtn.addEventListener("click",hideAndWrite);
     elements.skipSentenceButton.addEventListener("click",skipCurrentSentence);
     elements.checkButton.addEventListener("click",submitAnswer);
@@ -1157,8 +1244,13 @@
       if(e.key==="Enter"&&!e.shiftKey&&state.waitingForNext){e.preventDefault();moveToNextSentence();}
     });
     document.addEventListener("keydown",handlePracticeShortcuts);
+    if (speechState.supported) {
+      if (typeof window.speechSynthesis.addEventListener === "function") window.speechSynthesis.addEventListener("voiceschanged", loadSpeechVoices);
+      else window.speechSynthesis.onvoiceschanged = loadSpeechVoices;
+    }
 
     restoreSourceDraft();
+    loadSpeechVoices();
     refreshSourceMeta();refreshStats();refreshProgress();
   </script>
 </body>

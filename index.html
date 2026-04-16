@@ -446,6 +446,7 @@
         <p id="targetSentence" class="target-sentence">연습을 시작하면 한 문장씩 여기에 표시됩니다.</p>
         <span id="memorizeMsg" class="memorize-msg"></span>
         <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
+          <button id="prevSentenceButton" class="button-secondary" type="button">이전 문장으로 가기</button>
           <button id="memorizeBtn" class="button-primary memorize-btn" type="button">다 읽었어요 — 가리고 쓰기</button>
           <button id="skipSentenceButton" class="button-secondary" type="button">다음 문장으로 가기</button>
         </div>
@@ -732,6 +733,7 @@
       progressFill: $("progressFill"),
       sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
       sentenceActionRow: $("sentenceActionRow"),
+      prevSentenceButton: $("prevSentenceButton"),
       memorizeBtn: $("memorizeBtn"), skipSentenceButton: $("skipSentenceButton"), memorizeMsg: $("memorizeMsg"),
       userInput: $("userInput"),
       checkButton: $("checkButton"), retryButton: $("retryButton"),
@@ -919,6 +921,10 @@
       elements.userInput.focus();
     }
     function revealSentence(){elements.sentenceCard.classList.remove("memorize");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";}
+    function refreshSentenceActionButtons(){
+      elements.prevSentenceButton.disabled=state.currentIndex<=0;
+      elements.skipSentenceButton.disabled=!state.active;
+    }
     function hideHint(){state.hintLevel=0;elements.hintDisplay.hidden=true;elements.hintText.textContent="";elements.hintLevel.textContent="";}
     function showHint(){
       if(!state.active)return;var cur=state.currentQueue[state.currentIndex];if(!cur)return;
@@ -938,8 +944,16 @@
       elements.sentenceActionRow.hidden=false;
       elements.memorizeMsg.textContent="문장을 다시 읽은 뒤 가리고 써보세요.";
       elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
+      refreshSentenceActionButtons();
       elements.memorizeBtn.focus();
       setFeedback("다시 도전하세요.","같은 문장을 다시 읽고 기억해서 써보세요.","","&#9999;&#65039;");
+    }
+    function moveToPreviousSentence(){
+      if(!state.active||state.waitingForNext||state.currentIndex<=0)return;
+      hideComparison();hideHint();state.hintLevel=0;
+      state.currentIndex-=1;
+      setFeedback("이전 문장으로 돌아갑니다.","앞 문장을 다시 읽고 연습할 수 있습니다.","","&#11013;&#65039;");
+      renderCurrentSentence();
     }
     function skipCurrentSentence(){
       if(!state.active||state.waitingForNext)return;
@@ -951,7 +965,7 @@
     }
     function moveToNextSentence(){
       state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
-      hideDifficultyRow();state.currentIndex+=1;renderCurrentSentence();
+      hideDifficultyRow();hideComparison();state.currentIndex+=1;renderCurrentSentence();
     }
     function renderCurrentSentence(){
       state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
@@ -977,6 +991,7 @@
       elements.memorizeMsg.textContent="문장을 읽은 뒤 아래 버튼을 눌러 가리고 쓰세요.";
       elements.userInput.value="";elements.userInput.disabled=true;
       elements.checkButton.disabled=true;elements.hintButton.disabled=true;
+      refreshSentenceActionButtons();
       elements.memorizeBtn.focus();refreshProgress();refreshStats();
     }
     function finishPractice(){
@@ -1058,6 +1073,7 @@
     elements.sourceText.addEventListener("input",refreshSourceMeta);
     elements.startButton.addEventListener("click",startPractice);
     elements.restartButton.addEventListener("click",function(){elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;startPractice();});
+    elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
     elements.memorizeBtn.addEventListener("click",hideAndWrite);
     elements.skipSentenceButton.addEventListener("click",skipCurrentSentence);
     elements.checkButton.addEventListener("click",submitAnswer);

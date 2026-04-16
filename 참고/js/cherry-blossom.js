@@ -96,18 +96,18 @@
       vx: 0, vy: 0,
       // Rotation on Z axis (2D rotation)
       rotZ: Math.random() * 360,
-      rotZSpeed: (Math.random() - 0.5) * 0.6,
+      rotZSpeed: (Math.random() - 0.5) * 0.28,
       // Simulated 3D tumble via scaleX oscillation
       flipPhase: Math.random() * Math.PI * 2,
-      flipSpeed: 0.3 + Math.random() * 0.8,
+      flipSpeed: 0.18 + Math.random() * 0.35,
       // Spiral / swirl motion
       swirlPhase: Math.random() * Math.PI * 2,
-      swirlSpeed: 0.15 + Math.random() * 0.35,
-      swirlRadius: 8 + Math.random() * 20,
+      swirlSpeed: 0.08 + Math.random() * 0.18,
+      swirlRadius: 4 + Math.random() * 10,
       // Base fall speed (very gentle)
-      baseFallSpeed: (0.1 + Math.random() * 0.2) * speedMul,
+      baseFallSpeed: (0.06 + Math.random() * 0.12) * speedMul,
       // Base drift speed (horizontal)
-      baseDriftSpeed: (0.15 + Math.random() * 0.3) * speedMul,
+      baseDriftSpeed: (0.08 + Math.random() * 0.18) * speedMul,
       scale: depth < 0.33 ? 0.4 + Math.random() * 0.3 :
              depth < 0.66 ? 0.6 + Math.random() * 0.4 :
                             0.8 + Math.random() * 0.5
@@ -119,24 +119,24 @@
     time += 0.016;
 
     // Mouse wind — smooth follow
-    mouseWindX += (mouseVX * 0.08 - mouseWindX) * 0.02;
-    mouseWindY += (mouseVY * 0.04 - mouseWindY) * 0.02;
-    mouseVX *= 0.95; mouseVY *= 0.95;
+    mouseWindX += (mouseVX * 0.03 - mouseWindX) * 0.015;
+    mouseWindY += (mouseVY * 0.015 - mouseWindY) * 0.015;
+    mouseVX *= 0.92; mouseVY *= 0.92;
 
     // Ambient wind gentle oscillation
-    ambientWindX = 0.35 + Math.sin(time * 0.1) * 0.15;
-    ambientWindY = 0.05 + Math.sin(time * 0.07 + 1.5) * 0.05;
+    ambientWindX = 0.2 + Math.sin(time * 0.06) * 0.06;
+    ambientWindY = 0.02 + Math.sin(time * 0.05 + 1.5) * 0.02;
 
     // Random gust system
     gustTimer -= 0.016;
     if (gustTimer <= 0) {
       // Trigger a new gust
-      gustDuration = 2 + Math.random() * 4;
-      gustTimer = gustDuration + 5 + Math.random() * 12; // wait before next gust
+      gustDuration = 1.5 + Math.random() * 2.5;
+      gustTimer = gustDuration + 8 + Math.random() * 18; // wait before next gust
       const angle = Math.random() * Math.PI * 0.5 - Math.PI * 0.25; // mostly rightward
-      const strength = 0.5 + Math.random() * 1.5;
+      const strength = 0.15 + Math.random() * 0.45;
       gustX = Math.cos(angle) * strength;
-      gustY = Math.sin(angle) * strength * 0.3;
+      gustY = Math.sin(angle) * strength * 0.2;
     }
     // Gust fades in and out
     let gustFade = 0;
@@ -147,9 +147,9 @@
       gustFade = Math.sin(Math.min(1, Math.max(0, (gustDuration - (gustTimer - 5)) / gustDuration)) * Math.PI);
     }
     // Simpler: fade gust based on remaining time above threshold
-    const inGust = gustTimer > 5;
+    const inGust = gustTimer > 8;
     if (inGust) {
-      const progress = 1 - (gustTimer - 5) / gustDuration;
+      const progress = 1 - (gustTimer - 8) / gustDuration;
       gustFade = Math.sin(progress * Math.PI); // 0 -> 1 -> 0
     } else {
       gustFade = 0;
@@ -163,40 +163,40 @@
       const windInfluence = p.speedMul;
 
       // Swirl motion — creates spiraling paths
-      const swirlX = Math.sin(time * p.swirlSpeed + p.swirlPhase) * p.swirlRadius * 0.008 * windInfluence;
-      const swirlY = Math.cos(time * p.swirlSpeed * 0.7 + p.swirlPhase) * p.swirlRadius * 0.004 * windInfluence;
+      const swirlX = Math.sin(time * p.swirlSpeed + p.swirlPhase) * p.swirlRadius * 0.0035 * windInfluence;
+      const swirlY = Math.cos(time * p.swirlSpeed * 0.7 + p.swirlPhase) * p.swirlRadius * 0.0018 * windInfluence;
 
       // Mouse proximity push (gentle)
       const distX = p.x - mouseX;
       const distY = p.y - mouseY;
       const dist = Math.sqrt(distX * distX + distY * distY);
-      const mouseInfluence = Math.max(0, 1 - dist / 200) * 0.02;
+      const mouseInfluence = Math.max(0, 1 - dist / 160) * 0.008;
       const pushX = distX * mouseInfluence;
       const pushY = distY * mouseInfluence;
 
       // Accumulate velocity
-      p.vx += (totalWindX * windInfluence * 0.015) + swirlX + pushX;
-      p.vy += (p.baseFallSpeed * 0.03) + (totalWindY * windInfluence * 0.01) + swirlY + pushY;
+      p.vx += (totalWindX * windInfluence * 0.01) + swirlX + pushX;
+      p.vy += (p.baseFallSpeed * 0.02) + (totalWindY * windInfluence * 0.006) + swirlY + pushY;
 
       // Damping
-      p.vx *= 0.97;
-      p.vy *= 0.98;
+      p.vx *= 0.94;
+      p.vy *= 0.965;
 
       // Clamp
-      const maxSpeed = 1.5 * p.speedMul;
+      const maxSpeed = 0.9 * p.speedMul;
       p.vx = Math.max(-maxSpeed, Math.min(maxSpeed, p.vx));
-      p.vy = Math.max(-0.5, Math.min(maxSpeed * 0.8, p.vy));
+      p.vy = Math.max(-0.25, Math.min(maxSpeed * 0.6, p.vy));
 
       // Position update
-      p.x += p.vx + p.baseDriftSpeed * totalWindX * 0.3;
+      p.x += p.vx + p.baseDriftSpeed * totalWindX * 0.18;
       p.y += p.vy + p.baseFallSpeed;
 
       // Z rotation (tumble)
-      p.rotZ += p.rotZSpeed + totalWindX * windInfluence * 0.3;
+      p.rotZ += p.rotZSpeed + totalWindX * windInfluence * 0.12;
 
       // 3D flip simulation (scaleX oscillation)
       const flip = Math.cos(time * p.flipSpeed + p.flipPhase);
-      const scaleX = p.scale * (0.3 + Math.abs(flip) * 0.7);
+      const scaleX = p.scale * (0.65 + Math.abs(flip) * 0.35);
       const scaleY = p.scale;
 
       // Wrap around — generous margins

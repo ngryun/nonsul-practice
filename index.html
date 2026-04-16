@@ -262,6 +262,24 @@
       transition: filter var(--transition-normal);
     }
     .sentence-card .sentence-action-row { margin-top: 14px; }
+    .speech-rate-control {
+      display: inline-flex; align-items: center; gap: 8px;
+      min-height: 44px; padding: 0 12px;
+      border: 1px solid var(--line); border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.9); color: var(--muted);
+    }
+    .speech-rate-control label {
+      margin: 0; font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+    }
+    .speech-rate-control select {
+      border: 0; background: transparent; color: var(--text); font: inherit; font-size: 0.85rem;
+      padding: 8px 24px 8px 0; cursor: pointer;
+    }
+    .speech-rate-control select:focus { outline: none; }
+    .speech-rate-control:focus-within {
+      border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .speech-rate-control select:disabled { cursor: not-allowed; color: var(--muted); }
     .sentence-card .memorize-msg { display: block; margin-top: 10px; color: var(--muted); font-size: 0.85rem; }
     .sentence-card.memorize .memorize-msg { color: var(--accent); font-weight: 600; }
 
@@ -380,6 +398,8 @@
       .target-sentence { font-size: 1.15rem; }
       .button-row { flex-direction: column; }
       .button-row button { width: 100%; min-height: 44px; }
+      .speech-rate-control { width: 100%; justify-content: space-between; }
+      .speech-rate-control select { flex: 1; min-height: 44px; text-align: right; }
       .compare-grid { grid-template-columns: 1fr; }
       .summary-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
       .status-line { grid-template-columns: 1fr; }
@@ -453,6 +473,15 @@
         <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
           <button id="prevSentenceButton" class="button-secondary" type="button">이전 문장으로 가기 <span class="shortcut-hint">&larr;</span></button>
           <button id="readSentenceButton" class="button-secondary" type="button" aria-pressed="false">제시문장 읽기</button>
+          <div class="speech-rate-control">
+            <label for="readSpeedSelect">읽기 속도</label>
+            <select id="readSpeedSelect" aria-label="제시문장 읽기 속도">
+              <option value="0.8">천천히 0.8x</option>
+              <option value="0.95">기본 0.95x</option>
+              <option value="1.1">조금 빠르게 1.1x</option>
+              <option value="1.25">빠르게 1.25x</option>
+            </select>
+          </div>
           <button id="memorizeBtn" class="button-primary memorize-btn" type="button">다 읽었어요 - 가리고 쓰기 <span class="shortcut-hint">Space</span></button>
           <button id="skipSentenceButton" class="button-secondary" type="button">다음 문장으로 가기 <span class="shortcut-hint">&rarr;</span></button>
         </div>
@@ -743,6 +772,7 @@
       sentenceActionRow: $("sentenceActionRow"),
       prevSentenceButton: $("prevSentenceButton"),
       readSentenceButton: $("readSentenceButton"),
+      readSpeedSelect: $("readSpeedSelect"),
       memorizeBtn: $("memorizeBtn"), skipSentenceButton: $("skipSentenceButton"), memorizeMsg: $("memorizeMsg"),
       userInput: $("userInput"),
       checkButton: $("checkButton"), retryButton: $("retryButton"),
@@ -772,10 +802,13 @@
       supported: typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined",
       voices: [],
       activeUtterance: null,
-      speaking: false
+      speaking: false,
+      rate: 0.95
     };
     var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
     var PASS_THRESHOLD = 80;
+    var READ_SPEED_KEY = "nonsul-practice/read-speed";
+    var DEFAULT_SPEECH_RATE = 0.95;
 
     function splitIntoSentences(text) {
       var cleaned = text.replace(/\r\n/g,"\n").replace(/\u00a0/g," ").trim();
@@ -825,6 +858,33 @@
         if (saved) elements.sourceText.value = saved;
       } catch (e) {}
     }
+    function setSpeechRate(rate) {
+      var next = parseFloat(rate);
+      if (!Number.isFinite(next)) next = DEFAULT_SPEECH_RATE;
+      if (elements.readSpeedSelect) {
+        var hasOption = Array.from(elements.readSpeedSelect.options).some(function(option){ return parseFloat(option.value) === next; });
+        if (!hasOption) next = DEFAULT_SPEECH_RATE;
+        elements.readSpeedSelect.value = String(next);
+      }
+      speechState.rate = next;
+    }
+    function saveSpeechRate() {
+      try {
+        localStorage.setItem(READ_SPEED_KEY, String(speechState.rate));
+      } catch (e) {}
+    }
+    function restoreSpeechRate() {
+      var saved = DEFAULT_SPEECH_RATE;
+      try {
+        saved = localStorage.getItem(READ_SPEED_KEY) || DEFAULT_SPEECH_RATE;
+      } catch (e) {}
+      setSpeechRate(saved);
+    }
+    function handleSpeechRateChange() {
+      setSpeechRate(elements.readSpeedSelect.value);
+      saveSpeechRate();
+      if (speechState.supported && (speechState.speaking || window.speechSynthesis.speaking)) speakCurrentSentence(true);
+    }
     function refreshStats() {
       elements.totalCount.textContent = String(state.sourceSentences.length);
       elements.correctCount.textContent = String(state.correctAttempts);
@@ -863,26 +923,28 @@
       if (!btn) return;
       var canRead = speechState.supported && state.active && !elements.sentenceActionRow.hidden;
       btn.disabled = !canRead;
+      if (elements.readSpeedSelect) elements.readSpeedSelect.disabled = !speechState.supported;
       btn.classList.toggle("is-active", speechState.speaking);
       btn.setAttribute("aria-pressed", speechState.speaking ? "true" : "false");
       btn.textContent = speechState.supported ? (speechState.speaking ? "읽는 중 - 멈추기" : "제시문장 읽기") : "읽기 미지원";
     }
-    function speakCurrentSentence() {
+    function speakCurrentSentence(forceRestart) {
       if (!speechState.supported) {
         setFeedback("읽기 기능을 사용할 수 없습니다.","현재 브라우저에서 음성 읽기를 지원하지 않습니다.","bad","warning");
         return;
       }
       var cur = state.currentQueue[state.currentIndex];
       if (!cur || !cur.text) return;
-      if (speechState.speaking || window.speechSynthesis.speaking) {
+      if ((speechState.speaking || window.speechSynthesis.speaking) && !forceRestart) {
         stopSpeaking();
         return;
       }
+      if (speechState.speaking || window.speechSynthesis.speaking) stopSpeaking();
       var utterance = new SpeechSynthesisUtterance(cur.text);
       var voice = pickSpeechVoice();
       utterance.lang = voice && voice.lang ? voice.lang : "ko-KR";
       if (voice) utterance.voice = voice;
-      utterance.rate = 0.95;
+      utterance.rate = speechState.rate;
       utterance.pitch = 1;
       utterance.onstart = function() {
         speechState.activeUtterance = utterance;
@@ -1227,6 +1289,7 @@
     elements.restartButton.addEventListener("click",function(){elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;startPractice();});
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
     elements.readSentenceButton.addEventListener("click",speakCurrentSentence);
+    elements.readSpeedSelect.addEventListener("change",handleSpeechRateChange);
     elements.memorizeBtn.addEventListener("click",hideAndWrite);
     elements.skipSentenceButton.addEventListener("click",skipCurrentSentence);
     elements.checkButton.addEventListener("click",submitAnswer);
@@ -1250,6 +1313,7 @@
     }
 
     restoreSourceDraft();
+    restoreSpeechRate();
     loadSpeechVoices();
     refreshSourceMeta();refreshStats();refreshProgress();
   </script>

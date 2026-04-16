@@ -260,7 +260,7 @@
       filter: blur(8px); user-select: none; pointer-events: none;
       transition: filter var(--transition-normal);
     }
-    .sentence-card .memorize-btn { margin-top: 14px; }
+    .sentence-card .sentence-action-row { margin-top: 14px; }
     .sentence-card .memorize-msg { display: block; margin-top: 10px; color: var(--muted); font-size: 0.85rem; }
     .sentence-card.memorize .memorize-msg { color: var(--accent); font-weight: 600; }
 
@@ -445,7 +445,10 @@
         <span class="section-label">제시 문장</span>
         <p id="targetSentence" class="target-sentence">연습을 시작하면 한 문장씩 여기에 표시됩니다.</p>
         <span id="memorizeMsg" class="memorize-msg"></span>
-        <button id="memorizeBtn" class="button-primary memorize-btn" hidden>다 읽었어요 — 가리고 쓰기</button>
+        <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
+          <button id="memorizeBtn" class="button-primary memorize-btn" type="button">다 읽었어요 — 가리고 쓰기</button>
+          <button id="skipSentenceButton" class="button-secondary" type="button">다음 문장으로 가기</button>
+        </div>
       </div>
 
       <div id="hintDisplay" class="hint-card" hidden>
@@ -728,7 +731,8 @@
       progressLabel: $("progressLabel"), progressSubLabel: $("progressSubLabel"),
       progressFill: $("progressFill"),
       sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
-      memorizeBtn: $("memorizeBtn"), memorizeMsg: $("memorizeMsg"),
+      sentenceActionRow: $("sentenceActionRow"),
+      memorizeBtn: $("memorizeBtn"), skipSentenceButton: $("skipSentenceButton"), memorizeMsg: $("memorizeMsg"),
       userInput: $("userInput"),
       checkButton: $("checkButton"), retryButton: $("retryButton"),
       nextButton: $("nextButton"), hintButton: $("hintButton"),
@@ -909,12 +913,12 @@
     function hideAndWrite(){
       if(!state.active)return;
       elements.sentenceCard.classList.add("memorize");
-      elements.memorizeBtn.hidden=true;
+      elements.sentenceActionRow.hidden=true;
       elements.memorizeMsg.textContent="문장이 가려졌습니다. 기억해서 써보세요!";
       elements.userInput.disabled=false;elements.checkButton.disabled=false;elements.hintButton.disabled=false;
       elements.userInput.focus();
     }
-    function revealSentence(){elements.sentenceCard.classList.remove("memorize");elements.memorizeBtn.hidden=true;elements.memorizeMsg.textContent="";}
+    function revealSentence(){elements.sentenceCard.classList.remove("memorize");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";}
     function hideHint(){state.hintLevel=0;elements.hintDisplay.hidden=true;elements.hintText.textContent="";elements.hintLevel.textContent="";}
     function showHint(){
       if(!state.active)return;var cur=state.currentQueue[state.currentIndex];if(!cur)return;
@@ -931,11 +935,19 @@
       state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
       hideDifficultyRow();hideComparison();hideHint();state.hintLevel=0;
       elements.userInput.value="";revealSentence();
-      elements.memorizeBtn.hidden=false;
+      elements.sentenceActionRow.hidden=false;
       elements.memorizeMsg.textContent="문장을 다시 읽은 뒤 가리고 써보세요.";
       elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
       elements.memorizeBtn.focus();
       setFeedback("다시 도전하세요.","같은 문장을 다시 읽고 기억해서 써보세요.","","&#9999;&#65039;");
+    }
+    function skipCurrentSentence(){
+      if(!state.active||state.waitingForNext)return;
+      var cur=state.currentQueue[state.currentIndex];
+      if(!cur)return;
+      state.solvedIds.add(cur.id);
+      setFeedback("다음 문장으로 넘어갑니다.","연습이 필요 없는 문장은 바로 건너뛸 수 있습니다.","","&#9193;");
+      moveToNextSentence();
     }
     function moveToNextSentence(){
       state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
@@ -947,7 +959,7 @@
       if(!state.active){
         elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
         elements.targetSentence.textContent="연습을 시작하면 한 문장씩 여기에 표시됩니다.";
-        elements.memorizeBtn.hidden=true;elements.memorizeMsg.textContent="";
+        elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";
         refreshProgress();refreshStats();return;
       }
       if(state.currentIndex>=state.currentQueue.length){
@@ -961,7 +973,7 @@
       elements.targetSentence.textContent=cur.text;
       elements.sentenceCard.classList.remove("animate-in","memorize");
       void elements.sentenceCard.offsetWidth;elements.sentenceCard.classList.add("animate-in");
-      elements.memorizeBtn.hidden=false;
+      elements.sentenceActionRow.hidden=false;
       elements.memorizeMsg.textContent="문장을 읽은 뒤 아래 버튼을 눌러 가리고 쓰세요.";
       elements.userInput.value="";elements.userInput.disabled=true;
       elements.checkButton.disabled=true;elements.hintButton.disabled=true;
@@ -971,7 +983,7 @@
       state.active=false;stopTimer();
       elements.userInput.disabled=true;elements.checkButton.disabled=true;
       elements.nextButton.disabled=true;elements.retryButton.disabled=true;elements.hintButton.disabled=true;
-      hideDifficultyRow();elements.memorizeBtn.hidden=true;elements.memorizeMsg.textContent="";
+      hideDifficultyRow();elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";
       elements.progressFill.style.width="100%";
       elements.progressLabel.textContent="연습이 끝났습니다.";
       elements.progressSubLabel.textContent="전체 문장을 모두 통과했습니다.";
@@ -1047,6 +1059,7 @@
     elements.startButton.addEventListener("click",startPractice);
     elements.restartButton.addEventListener("click",function(){elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;startPractice();});
     elements.memorizeBtn.addEventListener("click",hideAndWrite);
+    elements.skipSentenceButton.addEventListener("click",skipCurrentSentence);
     elements.checkButton.addEventListener("click",submitAnswer);
     elements.retryButton.addEventListener("click",retryCurrentSentence);
     elements.nextButton.addEventListener("click",moveToNextSentence);

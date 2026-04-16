@@ -472,7 +472,7 @@
         <span id="memorizeMsg" class="memorize-msg"></span>
         <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
           <button id="prevSentenceButton" class="button-secondary" type="button">이전 문장으로 가기 <span class="shortcut-hint">&larr;</span></button>
-          <button id="readSentenceButton" class="button-secondary" type="button" aria-pressed="false">제시문장 읽기</button>
+          <button id="readSentenceButton" class="button-secondary" type="button" aria-pressed="false">제시문장 읽기 <span class="shortcut-hint">&darr;</span></button>
           <div class="speech-rate-control">
             <label for="readSpeedSelect">읽기 속도</label>
             <select id="readSpeedSelect" aria-label="제시문장 읽기 속도">
@@ -926,7 +926,9 @@
       if (elements.readSpeedSelect) elements.readSpeedSelect.disabled = !speechState.supported;
       btn.classList.toggle("is-active", speechState.speaking);
       btn.setAttribute("aria-pressed", speechState.speaking ? "true" : "false");
-      btn.textContent = speechState.supported ? (speechState.speaking ? "읽는 중 - 멈추기" : "제시문장 읽기") : "읽기 미지원";
+      btn.innerHTML = speechState.supported
+        ? (speechState.speaking ? "읽는 중 - 멈추기" : "제시문장 읽기") + ' <span class="shortcut-hint">&darr;</span>'
+        : "읽기 미지원";
     }
     function speakCurrentSentence(forceRestart) {
       if (!speechState.supported) {
@@ -1248,25 +1250,51 @@
     function isHintShortcut(e){
       return (e.ctrlKey||e.metaKey)&&!e.altKey&&(e.code==="Slash"||e.key==="/");
     }
+    function isPracticeShortcutKey(e){
+      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space";
+    }
+    function isPracticeOverlayOpen(){
+      return !elements.sourceModal.hidden||!elements.celebrationOverlay.hidden;
+    }
+    function shouldOwnPracticeShortcut(e){
+      if(e.defaultPrevented)return false;
+      if(isHintShortcut(e))return canShowHint();
+      if(!isPracticeShortcutKey(e))return false;
+      if(e.altKey||e.ctrlKey||e.metaKey)return false;
+      if(!state.active||isPracticeOverlayOpen())return false;
+      if(isTypingTarget(e.target))return false;
+      return true;
+    }
+    function consumeShortcutEvent(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof e.stopImmediatePropagation==="function")e.stopImmediatePropagation();
+    }
     function handlePracticeShortcuts(e){
       if(isHintShortcut(e)&&canShowHint()){
-        e.preventDefault();showHint();return;
+        consumeShortcutEvent(e);showHint();return;
       }
+      if(!shouldOwnPracticeShortcut(e))return;
+      consumeShortcutEvent(e);
       if(state.waitingForNext&&!elements.retryButton.disabled&&e.key==="ArrowUp"){
-        e.preventDefault();retryCurrentSentence();return;
+        retryCurrentSentence();return;
       }
-      if(!state.active||state.waitingForNext||elements.sentenceActionRow.hidden)return;
-      if(isTypingTarget(e.target))return;
-      if(e.key===" "&&(e.target&&e.target.tagName==="BUTTON"))return;
+      if(state.waitingForNext||elements.sentenceActionRow.hidden)return;
       if(e.key==="ArrowLeft"){
-        e.preventDefault();moveToPreviousSentence();return;
+        moveToPreviousSentence();return;
+      }
+      if(e.key==="ArrowDown"){
+        speakCurrentSentence();return;
       }
       if(e.key==="ArrowRight"){
-        e.preventDefault();skipCurrentSentence();return;
+        skipCurrentSentence();return;
       }
       if(e.key===" "||e.code==="Space"){
-        e.preventDefault();hideAndWrite();
+        hideAndWrite();
       }
+    }
+    function suppressShortcutKeyup(e){
+      if(shouldOwnPracticeShortcut(e))consumeShortcutEvent(e);
     }
 
     function showCelebration(){
@@ -1306,7 +1334,8 @@
       if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();if(!state.waitingForNext)submitAnswer();else moveToNextSentence();return;}
       if(e.key==="Enter"&&!e.shiftKey&&state.waitingForNext){e.preventDefault();moveToNextSentence();}
     });
-    document.addEventListener("keydown",handlePracticeShortcuts);
+    document.addEventListener("keydown",handlePracticeShortcuts,true);
+    document.addEventListener("keyup",suppressShortcutKeyup,true);
     if (speechState.supported) {
       if (typeof window.speechSynthesis.addEventListener === "function") window.speechSynthesis.addEventListener("voiceschanged", loadSpeechVoices);
       else window.speechSynthesis.onvoiceschanged = loadSpeechVoices;

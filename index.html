@@ -2676,8 +2676,9 @@
         elements.userInput.placeholder = "현재 문장을 그대로 입력하세요.";
         elements.hintButton.disabled = true;
         state.gradedAt = Date.now();
-        state.waitingForNext = true;
+        state.waitingForNext = false;
         elements.nextButton.disabled = false;
+        elements.retryButton.disabled = true;
         showDifficultyRow(cur.id);
         updateStageBadge(); updateStageToggleButton();
         elements.memorizeBtn.focus();

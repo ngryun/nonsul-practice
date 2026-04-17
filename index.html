@@ -63,7 +63,7 @@
     .page {
       position: relative;
       z-index: 1;
-      width: min(760px, calc(100% - 40px));
+      width: min(900px, calc(100% - 40px));
       margin: 40px auto 60px;
     }
     .page-header {
@@ -326,6 +326,63 @@
       margin-bottom: 12px; border: 1px solid var(--line); border-radius: var(--radius-md);
       background: rgba(255,255,255,0.9); box-shadow: var(--shadow-sm); padding: 16px;
       transition: all var(--transition-normal);
+    }
+    .practice-layout {
+      display: grid;
+      grid-template-columns: minmax(0,1fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .practice-main { min-width: 0; }
+    .history-panel {
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.78);
+      box-shadow: var(--shadow-sm);
+      padding: 14px;
+      align-self: start;
+    }
+    .history-panel[hidden] { display: none; }
+    .history-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .history-panel-head .section-label { margin-bottom: 0; }
+    .history-empty {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.65;
+    }
+    .history-empty[hidden] { display: none; }
+    .history-content {
+      max-height: min(62vh, 680px);
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .history-content:empty { display: none; }
+    .history-entry {
+      margin: 0;
+      padding: 11px 12px;
+      border: 1px solid rgba(212,132,154,0.12);
+      border-radius: var(--radius-sm);
+      background: rgba(247,243,239,0.78);
+      color: var(--muted);
+      font-family: 'Noto Serif KR', "AppleMyungjo","Nanum Myeongjo",serif;
+      font-size: 0.92rem;
+      line-height: 1.74;
+      white-space: pre-wrap;
+      word-break: keep-all;
+    }
+    .history-entry + .history-entry { margin-top: 8px; }
+    .history-entry.is-latest {
+      border-color: rgba(212,132,154,0.32);
+      background: rgba(255,241,245,0.92);
+      color: var(--text);
     }
     .practice-strip {
       padding: 12px 14px;
@@ -697,6 +754,18 @@
     .celebration-buttons { display: flex; gap: 10px; justify-content: center; }
 
     /* Responsive */
+    @media (min-width: 981px) {
+      .page {
+        width: min(1280px, calc(100% - 56px));
+      }
+      .practice-layout.has-history-panel {
+        grid-template-columns: minmax(280px,380px) minmax(0,1fr);
+      }
+    }
+    @media (max-width: 980px) {
+      .practice-layout { grid-template-columns: minmax(0,1fr); }
+      .history-panel { display: none !important; }
+    }
     @media (max-width: 600px) {
       .page { width: calc(100% - 24px); margin: 20px auto 24px; }
       .source-section,.practice-section { padding: 18px; }
@@ -792,87 +861,99 @@
             <button id="restartButton" class="button-secondary strip-icon-button" type="button" disabled aria-label="처음부터 다시" title="처음부터 다시">&#8634;</button>
           </div>
         </div>
-        <div class="progress-track">
+      <div class="progress-track">
           <div id="progressFill" class="progress-fill"></div>
         </div>
       </div>
 
-      <div class="sentence-card animate-in" id="sentenceCard">
-        <div class="sentence-card-head">
-          <span class="section-label">제시 문장</span>
-          <span id="stageBadge" class="stage-badge" hidden></span>
-        </div>
-        <p id="targetSentence" class="target-sentence">연습을 시작하면 한 문장씩 여기에 표시됩니다.</p>
-        <p id="clozeDisplay" class="cloze-display" hidden></p>
-        <span id="memorizeMsg" class="memorize-msg"></span>
-        <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
-          <button id="prevSentenceButton" class="button-secondary icon-button" type="button" aria-label="이전 문장으로 가기" title="이전 문장으로 가기">&larr;</button>
-          <button id="readSentenceButton" class="button-secondary icon-button" type="button" aria-label="제시문장 읽기" title="제시문장 읽기" aria-pressed="false">
-            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
-              <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
-              <path d="M18 6a8.5 8.5 0 0 1 0 12"></path>
-            </svg>
-          </button>
-          <button id="skipSentenceButton" class="button-secondary icon-button" type="button" aria-label="다음 문장으로 가기" title="다음 문장으로 가기">&rarr;</button>
-          <div class="speech-rate-control">
-            <label for="readSpeedSelect" class="sr-only">읽기 속도</label>
-            <select id="readSpeedSelect" aria-label="제시문장 읽기 속도">
-              <option value="0.8">0.8x</option>
-              <option value="0.95">0.95x</option>
-              <option value="1.1">1.1x</option>
-              <option value="1.25">1.25x</option>
-            </select>
+      <div id="practiceLayout" class="practice-layout">
+        <aside id="historyPanel" class="history-panel" hidden>
+          <div class="history-panel-head">
+            <span class="section-label">지금까지 쓴 글</span>
           </div>
-          <button id="stageToggleButton" class="button-secondary compact-button" type="button" title="빈칸 모드로 먼저 연습하거나, 전체 받아쓰기로 바로 갑니다.">🧩 빈칸 먼저</button>
-          <button id="memorizeBtn" class="button-primary memorize-btn" type="button">가리고 쓰기 <span class="shortcut-hint">Space</span></button>
-        </div>
-      </div>
+          <p id="historyEmpty" class="history-empty">통과한 문장이 쌓이면 여기에 이어집니다.</p>
+          <div id="historyContent" class="history-content"></div>
+        </aside>
 
-      <div id="hintDisplay" class="hint-card" hidden>
-        <span class="section-label">힌트</span>
-        <p id="hintText" class="hint-text"></p>
-        <span id="hintLevel" class="hint-level"></span>
-      </div>
+        <div class="practice-main">
+          <div class="sentence-card animate-in" id="sentenceCard">
+            <div class="sentence-card-head">
+              <span class="section-label">제시 문장</span>
+              <span id="stageBadge" class="stage-badge" hidden></span>
+            </div>
+            <p id="targetSentence" class="target-sentence">연습을 시작하면 한 문장씩 여기에 표시됩니다.</p>
+            <p id="clozeDisplay" class="cloze-display" hidden></p>
+            <span id="memorizeMsg" class="memorize-msg"></span>
+            <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
+              <button id="prevSentenceButton" class="button-secondary icon-button" type="button" aria-label="이전 문장으로 가기" title="이전 문장으로 가기">&larr;</button>
+              <button id="readSentenceButton" class="button-secondary icon-button" type="button" aria-label="제시문장 읽기" title="제시문장 읽기" aria-pressed="false">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+                  <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+                  <path d="M18 6a8.5 8.5 0 0 1 0 12"></path>
+                </svg>
+              </button>
+              <button id="skipSentenceButton" class="button-secondary icon-button" type="button" aria-label="다음 문장으로 가기" title="다음 문장으로 가기">&rarr;</button>
+              <div class="speech-rate-control">
+                <label for="readSpeedSelect" class="sr-only">읽기 속도</label>
+                <select id="readSpeedSelect" aria-label="제시문장 읽기 속도">
+                  <option value="0.8">0.8x</option>
+                  <option value="0.95">0.95x</option>
+                  <option value="1.1">1.1x</option>
+                  <option value="1.25">1.25x</option>
+                </select>
+              </div>
+              <button id="stageToggleButton" class="button-secondary compact-button" type="button" title="빈칸 모드로 먼저 연습하거나, 전체 받아쓰기로 바로 갑니다.">🧩 빈칸 먼저</button>
+              <button id="memorizeBtn" class="button-primary memorize-btn" type="button">가리고 쓰기 <span class="shortcut-hint">Space</span></button>
+            </div>
+          </div>
 
-      <div class="input-card">
-        <label for="userInput">입력 후 채점 <span class="shortcut-hint">Enter</span></label>
-        <textarea id="userInput" placeholder="현재 문장을 그대로 입력하세요." disabled></textarea>
-        <div class="button-row input-action-row">
-          <button id="checkButton" class="button-primary" disabled>채점</button>
-          <button id="retryButton" class="button-secondary" disabled>다시 <span class="shortcut-hint">&uarr;</span></button>
-          <button id="nextButton" class="button-secondary" disabled>다음</button>
-          <button id="hintButton" class="button-secondary" disabled>힌트 <span class="shortcut-hint">Ctrl+/</span></button>
-        </div>
-      </div>
+          <div id="hintDisplay" class="hint-card" hidden>
+            <span class="section-label">힌트</span>
+            <p id="hintText" class="hint-text"></p>
+            <span id="hintLevel" class="hint-level"></span>
+          </div>
 
-      <div id="feedbackCard" class="feedback-card">
-        <div class="feedback-icon" id="feedbackIcon">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5h8"></path><path d="M8 10h8"></path><path d="M8 14.5h5"></path><path d="M6.5 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14l-3-2.5-3 2.5-3-2.5-3 2.5V5a1.5 1.5 0 0 1 1.5-1.5Z"></path></svg>
-        </div>
-        <div class="feedback-body">
-          <h3 id="feedbackTitle" class="feedback-title">아직 시작 전입니다.</h3>
-          <p id="feedbackText" class="feedback-text">위에 모범 답안을 붙여넣고 연습을 시작하면, 한 문장씩 읽고 기억해서 쓸 수 있습니다.</p>
-          <div id="difficultyRow" class="difficulty-row" hidden>
-            <span class="difficulty-label">이 문장은?</span>
-            <button class="difficulty-btn" data-level="easy" type="button">쉬움</button>
-            <button class="difficulty-btn" data-level="normal" type="button">보통</button>
-            <button class="difficulty-btn" data-level="hard" type="button">어려움</button>
+          <div class="input-card">
+            <label for="userInput">입력 후 채점 <span class="shortcut-hint">Enter</span></label>
+            <textarea id="userInput" placeholder="현재 문장을 그대로 입력하세요." disabled></textarea>
+            <div class="button-row input-action-row">
+              <button id="checkButton" class="button-primary" disabled>채점</button>
+              <button id="retryButton" class="button-secondary" disabled>다시 <span class="shortcut-hint">&uarr;</span></button>
+              <button id="nextButton" class="button-secondary" disabled>다음</button>
+              <button id="hintButton" class="button-secondary" disabled>힌트 <span class="shortcut-hint">Ctrl+/</span></button>
+            </div>
+          </div>
+
+          <div id="feedbackCard" class="feedback-card">
+            <div class="feedback-icon" id="feedbackIcon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5h8"></path><path d="M8 10h8"></path><path d="M8 14.5h5"></path><path d="M6.5 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14l-3-2.5-3 2.5-3-2.5-3 2.5V5a1.5 1.5 0 0 1 1.5-1.5Z"></path></svg>
+            </div>
+            <div class="feedback-body">
+              <h3 id="feedbackTitle" class="feedback-title">아직 시작 전입니다.</h3>
+              <p id="feedbackText" class="feedback-text">위에 모범 답안을 붙여넣고 연습을 시작하면, 한 문장씩 읽고 기억해서 쓸 수 있습니다.</p>
+              <div id="difficultyRow" class="difficulty-row" hidden>
+                <span class="difficulty-label">이 문장은?</span>
+                <button class="difficulty-btn" data-level="easy" type="button">쉬움</button>
+                <button class="difficulty-btn" data-level="normal" type="button">보통</button>
+                <button class="difficulty-btn" data-level="hard" type="button">어려움</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="compareCard" class="compare-card" hidden>
+            <span class="section-label">비교</span>
+            <div class="compare-grid">
+              <div class="compare-box"><h3>모범 문장</h3><div id="expectedDiff" class="diff-line"></div></div>
+              <div class="compare-box"><h3>입력 문장</h3><div id="actualDiff" class="diff-line"></div></div>
+            </div>
+            <p class="compare-note">빠진 글자는 <strong>∅</strong>로 표시됩니다.</p>
+          </div>
+
+          <div id="footerNote" class="footer-note">
+            이 파일 하나만 열면 바로 연습할 수 있습니다.
           </div>
         </div>
-      </div>
-
-      <div id="compareCard" class="compare-card" hidden>
-        <span class="section-label">비교</span>
-        <div class="compare-grid">
-          <div class="compare-box"><h3>모범 문장</h3><div id="expectedDiff" class="diff-line"></div></div>
-          <div class="compare-box"><h3>입력 문장</h3><div id="actualDiff" class="diff-line"></div></div>
-        </div>
-        <p class="compare-note">빠진 글자는 <strong>∅</strong>로 표시됩니다.</p>
-      </div>
-
-      <div id="footerNote" class="footer-note">
-        이 파일 하나만 열면 바로 연습할 수 있습니다.
       </div>
     </section>
   </div>
@@ -1113,6 +1194,8 @@
       sentenceCount: $("sentenceCount"),
       progressPosition: $("progressPosition"), progressDone: $("progressDone"),
       progressFill: $("progressFill"),
+      practiceLayout: $("practiceLayout"),
+      historyPanel: $("historyPanel"), historyContent: $("historyContent"), historyEmpty: $("historyEmpty"),
       sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
       clozeDisplay: $("clozeDisplay"), stageBadge: $("stageBadge"),
       stageToggleButton: $("stageToggleButton"),
@@ -1142,6 +1225,7 @@
       currentIndex: 0, round: 1,
       totalAttempts: 0, correctAttempts: 0, wrongAttempts: 0,
       solvedIds: new Set(), startedAt: null, timerId: null,
+      committedHistory: [], historyAcceptedCounter: 0,
       manualSourceSentences: null,
       sourceModalSentences: [], sourceModalDirty: false,
       enterAdvanceLocked: false,
@@ -1868,6 +1952,53 @@
       elements.progressDone.textContent = completed + " / " + total;
       elements.progressFill.style.width = (total ? (completed / total) * 100 : 0) + "%";
     }
+    function commitHistorySentence(sentenceId, text) {
+      var committedText = normalizeForCompare(text || "");
+      if (!committedText) return;
+      state.historyAcceptedCounter += 1;
+      for (var i = 0; i < state.committedHistory.length; i++) {
+        if (state.committedHistory[i].sentenceId === sentenceId) {
+          state.committedHistory[i].text = committedText;
+          state.committedHistory[i].acceptedAtOrder = state.historyAcceptedCounter;
+          return;
+        }
+      }
+      state.committedHistory.push({
+        sentenceId: sentenceId,
+        text: committedText,
+        acceptedAtOrder: state.historyAcceptedCounter
+      });
+    }
+    function renderHistoryPanel() {
+      var entries = state.committedHistory.slice().sort(function(a, b) {
+        return a.sentenceId - b.sentenceId;
+      });
+      var shouldShow = state.active || entries.length > 0;
+      if (elements.historyPanel) elements.historyPanel.hidden = !shouldShow;
+      if (elements.practiceLayout) elements.practiceLayout.classList.toggle("has-history-panel", shouldShow);
+      if (!shouldShow) {
+        elements.historyContent.innerHTML = "";
+        elements.historyEmpty.hidden = false;
+        elements.historyEmpty.textContent = "통과한 문장이 쌓이면 여기에 이어집니다.";
+        return;
+      }
+      if (!entries.length) {
+        elements.historyContent.innerHTML = "";
+        elements.historyEmpty.hidden = false;
+        elements.historyEmpty.textContent = "통과한 문장이 쌓이면 여기에 이어집니다.";
+        return;
+      }
+      var latestOrder = 0;
+      for (var i = 0; i < entries.length; i++) {
+        if ((entries[i].acceptedAtOrder || 0) > latestOrder) latestOrder = entries[i].acceptedAtOrder || 0;
+      }
+      var html = "";
+      for (var j = 0; j < entries.length; j++) {
+        html += '<p class="history-entry' + (entries[j].acceptedAtOrder === latestOrder ? ' is-latest' : '') + '">' + escapeHtml(entries[j].text) + '</p>';
+      }
+      elements.historyEmpty.hidden = true;
+      elements.historyContent.innerHTML = html;
+    }
     function getFeedbackIcon(name){
       var icons = {
         note: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5h8"></path><path d="M8 10h8"></path><path d="M8 14.5h5"></path><path d="M6.5 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14l-3-2.5-3 2.5-3-2.5-3 2.5V5a1.5 1.5 0 0 1 1.5-1.5Z"></path></svg>',
@@ -2308,6 +2439,7 @@
         elements.targetSentence.textContent="연습을 시작하면 한 문장씩 여기에 표시됩니다.";
         elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";
         updateReadButtonState();
+        renderHistoryPanel();
         refreshProgress();refreshStats();return;
       }
       if(state.currentIndex>=state.currentQueue.length){
@@ -2333,6 +2465,7 @@
       elements.checkButton.disabled=true;elements.hintButton.disabled=true;
       refreshSentenceActionButtons();
       updateStageBadge();updateStageToggleButton();
+      renderHistoryPanel();
       elements.memorizeBtn.focus();refreshProgress();refreshStats();
     }
     function finishPractice(){
@@ -2346,6 +2479,7 @@
       setFeedback("완료했습니다.","틀린 문장까지 모두 통과했습니다.","good","success");
       hideComparison();hideHint();refreshStats();refreshProgress();
       elements.stageBadge.hidden=true;
+      renderHistoryPanel();
       renderHeatmapPanel();
       setPracticeAuxVisibility(false);
       elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;
@@ -2360,6 +2494,7 @@
       state.keywordStats=buildKeywordStats(state.sourceSentences);
       state.currentQueue=state.sourceSentences.slice();state.retryQueue=[];
       state.currentIndex=0;state.round=1;state.totalAttempts=0;state.correctAttempts=0;state.wrongAttempts=0;
+      state.committedHistory=[];state.historyAcceptedCounter=0;
       state.solvedIds=new Set();state.startedAt=Date.now();state.active=true;
       state.waitingForNext=false;state.hintLevel=0;state.difficultyMap={};state.similarityLog=[];
       elements.restartButton.disabled=false;
@@ -2389,10 +2524,12 @@
       renderHeatmapPanel();
       if(exact){
         state.correctAttempts+=1;state.solvedIds.add(cur.id);
+        commitHistorySentence(cur.id, raw);
         setFeedback("완벽한 정답입니다!","100% 일치합니다.","good","success");
         hideComparison();hideHint();
       }else if(close){
         state.correctAttempts+=1;state.solvedIds.add(cur.id);
+        commitHistorySentence(cur.id, raw);
         setFeedback("정답으로 인정합니다! ("+sim+"% 일치)","정답 기준은 "+PASS_THRESHOLD+"% 이상이며 현재 답안은 통과입니다.","good","success");
         showComparison(ne,na);highlightSentenceDiff(cur.text,raw);hideHint();
       }else{
@@ -2402,6 +2539,7 @@
         setFeedback("오답입니다. ("+sim+"% 일치)",msg,"bad","close");
         showComparison(ne,na);highlightSentenceDiff(cur.text,raw);
       }
+      if (passed) renderHistoryPanel();
       refreshStats();refreshProgress();
       state.gradedAt=Date.now();
       state.waitingForNext=true;elements.nextButton.disabled=false;elements.retryButton.disabled=false;
@@ -2659,6 +2797,7 @@
     loadSpeechVoices();
     renderHeatmapPanel();
     setPracticeAuxVisibility(false);
+    renderHistoryPanel();
     refreshSourceMeta();refreshStats();refreshProgress();
   </script>
 </body>

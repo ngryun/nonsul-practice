@@ -159,6 +159,88 @@
       padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-md);
       background: var(--soft); max-height: 50vh; overflow-y: auto;
     }
+    .source-modal-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+    .source-modal-editor {
+      display: grid;
+      gap: 10px;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+    .source-modal-editor[hidden] { display: none; }
+    .source-modal-empty {
+      padding: 18px 16px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius-md);
+      background: var(--soft);
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+    .source-modal-empty[hidden] { display: none; }
+    .source-modal-item {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.92);
+    }
+    .source-modal-item-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .source-modal-item-number {
+      flex-shrink: 0;
+      min-width: 28px;
+      padding-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-align: right;
+    }
+    .source-modal-item-input {
+      width: 100%;
+      min-height: 72px;
+      padding: 10px 12px;
+      background: var(--soft);
+      font-size: 0.92rem;
+      line-height: 1.55;
+      resize: vertical;
+    }
+    .source-modal-item-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      margin-left: 38px;
+    }
+    .source-modal-tool {
+      padding: 6px 10px;
+      min-height: 32px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      box-shadow: none;
+    }
+    .source-modal-tool:hover:not(:disabled) { transform: none; }
+    .source-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    .source-modal-footer button {
+      min-height: 38px;
+      padding-inline: 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+    }
     .source-modal-meta {
       display: flex; gap: 16px; margin-top: 12px; color: var(--muted); font-size: 0.85rem;
     }
@@ -810,10 +892,17 @@
           <button id="sourceModalClose" class="source-modal-close" type="button">&times;</button>
         </div>
       </div>
-      <div id="sourceModalText" class="source-modal-text"></div>
+      <p id="sourceModalNote" class="source-modal-note"></p>
+      <div id="sourceModalEditor" class="source-modal-editor"></div>
+      <div id="sourceModalEmpty" class="source-modal-empty" hidden>편집할 문장이 없습니다.</div>
       <div class="source-modal-meta">
         <span>총 <strong id="sourceModalCount">0</strong>문장</span>
         <span>오답 대기 <strong id="sourceModalRetry">0</strong>문장</span>
+      </div>
+      <div class="source-modal-footer">
+        <button id="sourceModalCancel" class="button-secondary" type="button">취소</button>
+        <button id="sourceModalSave" class="button-secondary" type="button">저장</button>
+        <button id="sourceModalApply" class="button-primary" type="button">저장 후 시작</button>
       </div>
     </div>
   </div>
@@ -1016,8 +1105,10 @@
       sourceText: $("sourceText"), sourceSection: $("sourceSection"),
       sourceTrigger: $("sourceTrigger"),
       sourceModal: $("sourceModal"), sourceModalCopy: $("sourceModalCopy"), sourceModalClose: $("sourceModalClose"),
-      sourceModalText: $("sourceModalText"), sourceModalCount: $("sourceModalCount"),
-      sourceModalRetry: $("sourceModalRetry"),
+      sourceModalNote: $("sourceModalNote"), sourceModalEditor: $("sourceModalEditor"),
+      sourceModalEmpty: $("sourceModalEmpty"),
+      sourceModalCount: $("sourceModalCount"), sourceModalRetry: $("sourceModalRetry"),
+      sourceModalCancel: $("sourceModalCancel"), sourceModalSave: $("sourceModalSave"), sourceModalApply: $("sourceModalApply"),
       startButton: $("startButton"), restartButton: $("restartButton"),
       sentenceCount: $("sentenceCount"),
       progressPosition: $("progressPosition"), progressDone: $("progressDone"),
@@ -1051,6 +1142,8 @@
       currentIndex: 0, round: 1,
       totalAttempts: 0, correctAttempts: 0, wrongAttempts: 0,
       solvedIds: new Set(), startedAt: null, timerId: null,
+      manualSourceSentences: null,
+      sourceModalSentences: [], sourceModalDirty: false,
       active: false, waitingForNext: false, hintLevel: 0,
       difficultyMap: {}, similarityLog: [],
       currentStage: "full", clozeData: null, clozePassedForCurrent: false,
@@ -1071,6 +1164,7 @@
       check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7.5 10 17.5l-4.5-4.5"></path></svg>'
     };
     var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
+    var SOURCE_SENTENCE_LIST_KEY = "nonsul-practice/source-sentences";
     var PASS_THRESHOLD = 80;
     var READ_SPEED_KEY = "nonsul-practice/read-speed";
     var DEFAULT_SPEECH_RATE = 0.95;
@@ -1092,6 +1186,7 @@
       "수": true, "것": true, "등": true, "및": true, "좀": true
     };
     var sourceModalCopyResetId = null;
+    var sourceModalHideTimerId = null;
 
     function hashText(s) {
       var h = 5381;
@@ -1111,6 +1206,43 @@
     }
     function getSentenceKey(text) {
       return hashText(normalizeForGrading(text));
+    }
+    function normalizeSourceText(text) {
+      return String(text || "").replace(/\r\n/g, "\n").trim();
+    }
+    function normalizeSourceSentenceValue(value) {
+      return String(value || "").replace(/\r\n/g, "\n").replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+    }
+    function getManualSourceText(sentences) {
+      return (sentences || []).map(normalizeSourceSentenceValue).filter(Boolean).join("\n");
+    }
+    function saveManualSourceSentences(sentences) {
+      var cleaned = (sentences || []).map(normalizeSourceSentenceValue).filter(Boolean);
+      state.manualSourceSentences = cleaned.length ? cleaned : null;
+      try {
+        if (cleaned.length) localStorage.setItem(SOURCE_SENTENCE_LIST_KEY, JSON.stringify(cleaned));
+        else localStorage.removeItem(SOURCE_SENTENCE_LIST_KEY);
+      } catch (e) {}
+    }
+    function clearManualSourceSentences() {
+      state.manualSourceSentences = null;
+      try { localStorage.removeItem(SOURCE_SENTENCE_LIST_KEY); } catch (e) {}
+    }
+    function restoreManualSourceSentences() {
+      var restored = null;
+      try {
+        var raw = localStorage.getItem(SOURCE_SENTENCE_LIST_KEY);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) restored = parsed.map(normalizeSourceSentenceValue).filter(Boolean);
+        }
+      } catch (e) {}
+      if (!restored || !restored.length) {
+        state.manualSourceSentences = null;
+        return;
+      }
+      if (normalizeSourceText(elements.sourceText.value) === normalizeSourceText(getManualSourceText(restored))) state.manualSourceSentences = restored;
+      else clearManualSourceSentences();
     }
     function isKeywordCandidate(token) {
       if (!token) return false;
@@ -1507,6 +1639,9 @@
     function splitIntoSentences(text) {
       var cleaned = text.replace(/\r\n/g,"\n").replace(/\u00a0/g," ").trim();
       if (!cleaned) return [];
+      if (state.manualSourceSentences && normalizeSourceText(cleaned) === normalizeSourceText(getManualSourceText(state.manualSourceSentences))) {
+        return state.manualSourceSentences.slice();
+      }
       return cleaned.split(/\n+/).map(function(l){return l.trim()}).filter(Boolean)
         .flatMap(function(line) {
           var m = line.match(/[^.!?。！？\n]+[.!?。！？…]?["'"')\]]*/g) || [];
@@ -1806,8 +1941,11 @@
       document.body.removeChild(textarea);
       return ok;
     }
+    function getSourceModalSentencesText() {
+      return getManualSourceText(state.sourceModalSentences && state.sourceModalSentences.length ? state.sourceModalSentences : splitIntoSentences(elements.sourceText.value));
+    }
     function copySourceModalText() {
-      var text = elements.sourceText.value || elements.sourceModalText.textContent || "";
+      var text = getSourceModalSentencesText();
       if (!text.trim()) return;
       var copyTask = (navigator.clipboard && window.isSecureContext)
         ? navigator.clipboard.writeText(text)
@@ -1822,18 +1960,185 @@
         sourceModalCopyResetId = setTimeout(resetSourceModalCopyState, 1400);
       });
     }
+    function syncSourceModalMeta() {
+      elements.sourceModalCount.textContent = String(state.sourceModalSentences.length);
+      elements.sourceModalRetry.textContent = String(state.retryQueue.length);
+      elements.sourceModalSave.disabled = state.sourceModalSentences.length === 0;
+      elements.sourceModalApply.disabled = state.sourceModalSentences.length === 0;
+      elements.sourceModalCopy.disabled = state.sourceModalSentences.length === 0;
+      elements.sourceModalApply.textContent = state.active ? "저장 후 다시 시작" : "저장 후 시작";
+      elements.sourceModalNote.textContent = state.active
+        ? "문장을 직접 고친 뒤 저장하거나, 저장 후 다시 시작으로 현재 연습에 반영하세요."
+        : "문장을 순서대로 확인하고 직접 수정하거나 분리·합치기 후 저장하세요.";
+    }
+    function focusSourceModalSentence(index, caret) {
+      requestAnimationFrame(function() {
+        var input = elements.sourceModalEditor.querySelector('[data-sentence-input="' + index + '"]');
+        if (!input) return;
+        input.focus();
+        if (typeof caret === "number") {
+          var pos = Math.max(0, Math.min(caret, input.value.length));
+          try { input.setSelectionRange(pos, pos); } catch (e) {}
+        }
+      });
+    }
+    function renderSourceModalEditor() {
+      elements.sourceModalEditor.replaceChildren();
+      elements.sourceModalEmpty.hidden = state.sourceModalSentences.length > 0;
+      elements.sourceModalEditor.hidden = state.sourceModalSentences.length === 0;
+      if (!state.sourceModalSentences.length) {
+        syncSourceModalMeta();
+        return;
+      }
+      var frag = document.createDocumentFragment();
+      for (var i = 0; i < state.sourceModalSentences.length; i++) {
+        var item = document.createElement("div");
+        item.className = "source-modal-item";
+
+        var head = document.createElement("div");
+        head.className = "source-modal-item-head";
+
+        var number = document.createElement("span");
+        number.className = "source-modal-item-number";
+        number.textContent = String(i + 1) + ".";
+
+        var input = document.createElement("textarea");
+        input.className = "source-modal-item-input";
+        input.setAttribute("data-sentence-input", String(i));
+        input.value = state.sourceModalSentences[i];
+
+        head.appendChild(number);
+        head.appendChild(input);
+        item.appendChild(head);
+
+        var tools = document.createElement("div");
+        tools.className = "source-modal-item-tools";
+
+        function makeTool(label, action, idx, disabled) {
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = "button-secondary source-modal-tool";
+          button.textContent = label;
+          button.setAttribute("data-modal-action", action);
+          button.setAttribute("data-modal-index", String(idx));
+          if (disabled) button.disabled = true;
+          return button;
+        }
+
+        tools.appendChild(makeTool("분리", "split", i, false));
+        tools.appendChild(makeTool("이전과 합치기", "merge-prev", i, i === 0));
+        tools.appendChild(makeTool("다음과 합치기", "merge-next", i, i === state.sourceModalSentences.length - 1));
+        tools.appendChild(makeTool("삭제", "delete", i, state.sourceModalSentences.length === 1));
+        item.appendChild(tools);
+        frag.appendChild(item);
+      }
+      elements.sourceModalEditor.appendChild(frag);
+      syncSourceModalMeta();
+    }
+    function findSentenceSplitPoint(value, preferred) {
+      var point = typeof preferred === "number" ? preferred : -1;
+      if (point > 0 && point < value.length) return point;
+      var center = Math.floor(value.length / 2);
+      var right = value.indexOf(" ", center);
+      var left = value.lastIndexOf(" ", center);
+      if (right > 0 && right < value.length - 1) return right;
+      if (left > 0 && left < value.length - 1) return left;
+      return center;
+    }
+    function updateSourceModalSentence(index, value) {
+      if (index < 0 || index >= state.sourceModalSentences.length) return;
+      state.sourceModalSentences[index] = value;
+      state.sourceModalDirty = true;
+    }
+    function splitSourceModalSentence(index, textarea) {
+      var current = state.sourceModalSentences[index] || "";
+      var splitAt = findSentenceSplitPoint(current, textarea ? textarea.selectionStart : null);
+      var left = normalizeSourceSentenceValue(current.slice(0, splitAt));
+      var right = normalizeSourceSentenceValue(current.slice(splitAt));
+      if (!left || !right) return;
+      state.sourceModalSentences.splice(index, 1, left, right);
+      state.sourceModalDirty = true;
+      renderSourceModalEditor();
+      focusSourceModalSentence(index + 1, 0);
+    }
+    function mergeSourceModalSentence(index, direction) {
+      var target = direction === -1 ? index - 1 : index + 1;
+      if (target < 0 || target >= state.sourceModalSentences.length) return;
+      var first = direction === -1 ? target : index;
+      var second = direction === -1 ? index : target;
+      var merged = normalizeSourceSentenceValue((state.sourceModalSentences[first] || "") + " " + (state.sourceModalSentences[second] || ""));
+      state.sourceModalSentences.splice(first, 2, merged);
+      state.sourceModalDirty = true;
+      renderSourceModalEditor();
+      focusSourceModalSentence(first, merged.length);
+    }
+    function deleteSourceModalSentence(index) {
+      if (state.sourceModalSentences.length <= 1) return;
+      state.sourceModalSentences.splice(index, 1);
+      state.sourceModalDirty = true;
+      renderSourceModalEditor();
+      focusSourceModalSentence(Math.max(0, index - 1));
+    }
+    function applySourceModalSentences() {
+      var cleaned = state.sourceModalSentences.map(normalizeSourceSentenceValue).filter(Boolean);
+      if (!cleaned.length) {
+        alert("최소 한 문장은 남겨 주세요.");
+        return null;
+      }
+      state.sourceModalSentences = cleaned;
+      state.sourceModalDirty = false;
+      elements.sourceText.value = getManualSourceText(cleaned);
+      saveSourceDraft();
+      saveManualSourceSentences(cleaned);
+      refreshSourceMeta();
+      if (!state.active) {
+        state.sourceSentences = cleaned.map(function(t, i) { return { id: i + 1, text: t }; });
+        state.keywordStats = buildKeywordStats(state.sourceSentences);
+      }
+      refreshProgress();
+      renderSourceModalEditor();
+      return cleaned;
+    }
+    function handleSourceModalSave(shouldRestart) {
+      var saved = applySourceModalSentences();
+      if (!saved) return;
+      hideSourceModal(true, true);
+      if (shouldRestart) {
+        startPractice();
+        return;
+      }
+      if (state.active) setFeedback("모범 답안을 저장했습니다.","변경 내용은 다시 시작하면 반영됩니다.","","note");
+      else setFeedback("모범 답안을 저장했습니다.","문장 구성이 업데이트되었습니다.","","note");
+    }
     function showSourceModal() {
       resetSourceModalCopyState();
-      elements.sourceModalText.textContent = elements.sourceText.value;
-      elements.sourceModalCount.textContent = String(state.sourceSentences.length);
-      elements.sourceModalRetry.textContent = String(state.retryQueue.length);
+      if (sourceModalHideTimerId) {
+        clearTimeout(sourceModalHideTimerId);
+        sourceModalHideTimerId = null;
+      }
+      state.sourceModalSentences = splitIntoSentences(elements.sourceText.value);
+      state.sourceModalDirty = false;
+      renderSourceModalEditor();
       elements.sourceModal.hidden = false;
       requestAnimationFrame(function(){elements.sourceModal.classList.add("visible");});
     }
-    function hideSourceModal() {
+    function hideSourceModal(force, immediate) {
+      if (!force && state.sourceModalDirty && !confirm("저장하지 않은 문장 편집을 닫을까요?")) return;
       resetSourceModalCopyState();
+      state.sourceModalDirty = false;
+      if (sourceModalHideTimerId) {
+        clearTimeout(sourceModalHideTimerId);
+        sourceModalHideTimerId = null;
+      }
       elements.sourceModal.classList.remove("visible");
-      setTimeout(function(){elements.sourceModal.hidden=true;},300);
+      if (immediate) {
+        elements.sourceModal.hidden = true;
+        return;
+      }
+      sourceModalHideTimerId = setTimeout(function(){
+        elements.sourceModal.hidden=true;
+        sourceModalHideTimerId = null;
+      },300);
     }
 
     // Difficulty
@@ -2203,7 +2508,7 @@
     function hideCelebration(){elements.celebrationOverlay.classList.remove("visible");setTimeout(function(){elements.celebrationOverlay.hidden=true;},300);}
 
     // Events
-    elements.sourceText.addEventListener("input",function(){saveSourceDraft();refreshSourceMeta();});
+    elements.sourceText.addEventListener("input",function(){clearManualSourceSentences();saveSourceDraft();refreshSourceMeta();});
     elements.startButton.addEventListener("click",startPractice);
     elements.restartButton.addEventListener("click",startPractice);
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
@@ -2228,8 +2533,27 @@
     elements.nextButton.addEventListener("click",moveToNextSentence);
     elements.hintButton.addEventListener("click",showHint);
     elements.sourceTrigger.addEventListener("click",showSourceModal);
+    elements.sourceModalEditor.addEventListener("input",function(e){
+      var input = e.target.closest("[data-sentence-input]");
+      if (!input) return;
+      updateSourceModalSentence(parseInt(input.getAttribute("data-sentence-input"), 10), input.value);
+    });
+    elements.sourceModalEditor.addEventListener("click",function(e){
+      var button = e.target.closest("[data-modal-action]");
+      if (!button) return;
+      var index = parseInt(button.getAttribute("data-modal-index"), 10);
+      var rowInput = elements.sourceModalEditor.querySelector('[data-sentence-input="' + index + '"]');
+      var action = button.getAttribute("data-modal-action");
+      if (action === "split") splitSourceModalSentence(index, rowInput);
+      else if (action === "merge-prev") mergeSourceModalSentence(index, -1);
+      else if (action === "merge-next") mergeSourceModalSentence(index, 1);
+      else if (action === "delete") deleteSourceModalSentence(index);
+    });
     elements.sourceModalCopy.addEventListener("click",copySourceModalText);
-    elements.sourceModalClose.addEventListener("click",hideSourceModal);
+    elements.sourceModalCancel.addEventListener("click",function(){hideSourceModal();});
+    elements.sourceModalSave.addEventListener("click",function(){handleSourceModalSave(false);});
+    elements.sourceModalApply.addEventListener("click",function(){handleSourceModalSave(true);});
+    elements.sourceModalClose.addEventListener("click",function(){hideSourceModal();});
     elements.sourceModal.addEventListener("click",function(e){if(e.target===elements.sourceModal)hideSourceModal();});
     elements.difficultyRow.addEventListener("click",function(e){var b=e.target.closest(".difficulty-btn");if(!b)return;var cur=state.currentQueue[state.currentIndex];if(cur)setDifficulty(cur.id,b.getAttribute("data-level"));});
     elements.celebrationRestart.addEventListener("click",function(){hideCelebration();startPractice();});
@@ -2267,6 +2591,7 @@
     }
 
     restoreSourceDraft();
+    restoreManualSourceSentences();
     restoreSpeechRate();
     loadSpeechVoices();
     renderHeatmapPanel();

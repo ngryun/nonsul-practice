@@ -960,7 +960,10 @@
       voices: [],
       activeUtterance: null,
       speaking: false,
-      rate: 0.95
+      rate: 0.95,
+      requestCounter: 0,
+      pendingRequestId: 0,
+      pendingTimer: null
     };
     var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
     var PASS_THRESHOLD = 80;
@@ -976,15 +979,49 @@
       return (h >>> 0).toString(36);
     }
     function loadHeatmap() {
+      var raw;
+      try { raw = localStorage.getItem(HEATMAP_KEY); } catch (e) { return {}; }
+      if (!raw) return {};
       try {
-        var raw = localStorage.getItem(HEATMAP_KEY);
-        if (!raw) return {};
         var parsed = JSON.parse(raw);
-        return (parsed && typeof parsed === "object") ? parsed : {};
-      } catch (e) { return {}; }
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          try { localStorage.removeItem(HEATMAP_KEY); } catch (e) {}
+          return {};
+        }
+        return parsed;
+      } catch (e) {
+        try { localStorage.removeItem(HEATMAP_KEY); } catch (e2) {}
+        return {};
+      }
+    }
+    function compactHeatmap(data) {
+      var entries = [];
+      for (var k in data) if (Object.prototype.hasOwnProperty.call(data, k)) entries.push({ key: k, entry: data[k] });
+      entries.sort(function (a, b) {
+        var af = (a.entry && a.entry.fails) || 0;
+        var bf = (b.entry && b.entry.fails) || 0;
+        if (bf !== af) return bf - af;
+        var al = (a.entry && a.entry.lastSeen) || 0;
+        var bl = (b.entry && b.entry.lastSeen) || 0;
+        return bl - al;
+      });
+      var keepCount = Math.max(30, Math.ceil(entries.length * 0.5));
+      var out = {};
+      for (var i = 0; i < Math.min(keepCount, entries.length); i++) out[entries[i].key] = entries[i].entry;
+      return out;
     }
     function saveHeatmap(data) {
-      try { localStorage.setItem(HEATMAP_KEY, JSON.stringify(data)); } catch (e) {}
+      try {
+        localStorage.setItem(HEATMAP_KEY, JSON.stringify(data));
+      } catch (e) {
+        var isQuota = e && (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED" || e.code === 22 || e.code === 1014);
+        if (!isQuota) return;
+        try {
+          localStorage.setItem(HEATMAP_KEY, JSON.stringify(compactHeatmap(data)));
+        } catch (e2) {
+          try { localStorage.removeItem(HEATMAP_KEY); } catch (e3) {}
+        }
+      }
     }
     function getSentenceKey(text) {
       return hashText(normalizeForGrading(text));
@@ -1164,35 +1201,92 @@
       for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
       return h >>> 0;
     }
+    var KOREAN_PARTICLES = [
+      "으로부터","으로써","으로서","에서부터","에게서","이라고","이라는","이라도","이라면","이라든","이나마",
+      "에서의","에서는","에서도","에서만","에게는","에게도","에게만","에게","에다","에는","에도","에만","에서",
+      "까지","부터","마다","조차","마저","처럼","보다","같이","라고","라는","라도","라면","나마","든지",
+      "에","의","을","를","이","가","은","는","도","만","와","과","로","랑","나","야","요","여","고"
+    ].sort(function(a,b){return b.length - a.length;});
+    var PARTICLE_REGEX = new RegExp("(" + KOREAN_PARTICLES.join("|") + ")$");
+    var KOREAN_ENDINGS = [
+      "였습니다","이었습니다","하였습니다","되었습니다","있었습니다","없었습니다",
+      "이었다","하였다","되었다","있었다","없었다","하였고","되었고","하였으며","되었으며",
+      "합니다","됩니다","입니다","입니까","있습니다","없습니다",
+      "했다","된다","한다","이다","있다","없다","같다","같은","같이","같아","같으",
+      "하여","해서","하고","하며","되어","되며","이며","이고","이면","지만","거나","라서","려면",
+      "하는","되는","했던","였던","되던","하던","하자","하라","하게","되게","하지","된다면","이라는"
+    ].sort(function(a,b){return b.length - a.length;});
+    var ENDING_REGEX = new RegExp("(" + KOREAN_ENDINGS.join("|") + ")$");
+    var KOREAN_STOPWORDS = (function () {
+      var set = {};
+      [
+        "그리고","그러나","그래서","따라서","또한","하지만","다만","그런데","그러므로","즉","또는","및",
+        "이러한","그러한","저러한","이런","저런","그런","어떤","무슨","어느","어떻게","왜","어찌",
+        "것","수","때","중","곳","거","데","바","점","면","등","이","그","저","나","너","우리","저희","당신","그들","그녀",
+        "매우","아주","너무","정말","참으로","특히","주로","대체로","보통","항상","가끔","때때로","자주","또","역시",
+        "이제","지금","이미","벌써","먼저","나중","곧","바로","이내","아직","더","덜","잘","못","안",
+        "있","없","하","되","같","많","적","큰","작은"
+      ].forEach(function (w) { set[w] = true; });
+      return set;
+    })();
+    function hasHanja(s) { return /[\u4E00-\u9FFF\u3400-\u4DBF]/.test(s); }
+    function hasHangul(s) { return /[\uAC00-\uD7A3]/.test(s); }
+    function hasContentChar(s) { return hasHangul(s) || hasHanja(s); }
+    function effectiveStem(token) {
+      var s = token;
+      for (var i = 0; i < 3; i++) {
+        var before = s;
+        s = s.replace(ENDING_REGEX, "");
+        s = s.replace(PARTICLE_REGEX, "");
+        if (s === before) break;
+      }
+      return s;
+    }
+    function isClozeEligible(token) {
+      var len = Array.from(token).length;
+      if (len < 2) return false;
+      if (!hasContentChar(token)) return false;
+      if (KOREAN_STOPWORDS[token]) return false;
+      var stem = effectiveStem(token);
+      if (!stem || !Array.from(stem).length) return false;
+      if (KOREAN_STOPWORDS[stem]) return false;
+      return true;
+    }
+    function scoreClozeCandidate(token, errorMap) {
+      var stem = effectiveStem(token) || token;
+      var stemLen = Array.from(stem).length;
+      var score = stemLen;
+      if (hasHanja(token)) score *= 1.6;
+      if (stemLen >= 2) score *= 1.2;
+      if (stemLen <= 1) score *= 0.4;
+      if (errorMap[token]) score += errorMap[token] * 3;
+      return score;
+    }
     function buildClozeData(text) {
       var tokens = tokenize(text);
       if (tokens.length < 2) return null;
-      // Keep original (display) tokens — same count as normalized tokens,
-      // just split by whitespace without stripping special chars.
       var displayTokens = text.replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean);
       var key = getSentenceKey(text);
       var heatmap = loadHeatmap();
       var errorMap = (heatmap[key] && heatmap[key].tokenErrors) || {};
       var eligible = [];
       for (var i = 0; i < tokens.length; i++) {
-        if (Array.from(tokens[i]).length >= 2) eligible.push(i);
+        if (isClozeEligible(tokens[i])) eligible.push(i);
       }
-      if (!eligible.length) eligible = tokens.map(function (_, i) { return i; });
-      var prio = [], rest = [];
-      for (var j = 0; j < eligible.length; j++) {
-        var idx = eligible[j];
-        if (errorMap[tokens[idx]]) prio.push(idx); else rest.push(idx);
-      }
-      var rng = mulberry32(seedFromString(key));
-      function shuffle(arr) {
-        for (var k = arr.length - 1; k > 0; k--) {
-          var r = Math.floor(rng() * (k + 1));
-          var tmp = arr[k]; arr[k] = arr[r]; arr[r] = tmp;
+      if (!eligible.length) {
+        for (var f = 0; f < tokens.length; f++) {
+          if (Array.from(tokens[f]).length >= 2) eligible.push(f);
         }
       }
-      shuffle(prio); shuffle(rest);
+      if (!eligible.length) eligible = tokens.map(function (_, i) { return i; });
+      var rng = mulberry32(seedFromString(key));
+      var scored = eligible.map(function (idx) {
+        return { idx: idx, score: scoreClozeCandidate(tokens[idx], errorMap) + rng() * 0.01 };
+      });
+      scored.sort(function (a, b) { return b.score - a.score; });
       var targetCount = Math.max(1, Math.ceil(eligible.length * CLOZE_BLANK_RATIO));
-      var picked = prio.concat(rest).slice(0, targetCount).sort(function (a, b) { return a - b; });
+      var picked = scored.slice(0, targetCount).map(function (s) { return s.idx; });
+      picked.sort(function (a, b) { return a - b; });
       return { tokens: tokens, displayTokens: displayTokens, blanks: picked, weakSet: errorMap };
     }
     function renderClozeDisplay(cloze) {
@@ -1408,6 +1502,11 @@
     }
     function stopSpeaking() {
       if (!speechState.supported) return;
+      if (speechState.pendingTimer) {
+        clearTimeout(speechState.pendingTimer);
+        speechState.pendingTimer = null;
+      }
+      speechState.pendingRequestId = 0;
       window.speechSynthesis.cancel();
       speechState.activeUtterance = null;
       speechState.speaking = false;
@@ -1436,35 +1535,53 @@
         stopSpeaking();
         return;
       }
-      if (speechState.speaking || window.speechSynthesis.speaking) stopSpeaking();
-      var utterance = new SpeechSynthesisUtterance(cur.text);
-      var voice = pickSpeechVoice();
-      utterance.lang = voice && voice.lang ? voice.lang : "ko-KR";
-      if (voice) utterance.voice = voice;
-      utterance.rate = speechState.rate;
-      utterance.pitch = 1;
-      utterance.onstart = function() {
-        speechState.activeUtterance = utterance;
-        speechState.speaking = true;
-        updateReadButtonState();
-      };
-      utterance.onend = function() {
-        if (speechState.activeUtterance !== utterance) return;
-        speechState.activeUtterance = null;
-        speechState.speaking = false;
-        updateReadButtonState();
-      };
-      utterance.onerror = function() {
-        if (speechState.activeUtterance !== utterance) return;
-        speechState.activeUtterance = null;
-        speechState.speaking = false;
-        updateReadButtonState();
-      };
-      speechState.activeUtterance = utterance;
+      if (speechState.pendingTimer) {
+        clearTimeout(speechState.pendingTimer);
+        speechState.pendingTimer = null;
+      }
+      var requestId = ++speechState.requestCounter;
+      speechState.pendingRequestId = requestId;
+      window.speechSynthesis.cancel();
+      speechState.activeUtterance = null;
       speechState.speaking = true;
       updateReadButtonState();
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      speechState.pendingTimer = setTimeout(function () {
+        speechState.pendingTimer = null;
+        if (speechState.pendingRequestId !== requestId) return;
+        var curNow = state.currentQueue[state.currentIndex];
+        if (!curNow || !curNow.text) {
+          speechState.pendingRequestId = 0;
+          speechState.speaking = false;
+          updateReadButtonState();
+          return;
+        }
+        var utterance = new SpeechSynthesisUtterance(curNow.text);
+        var voice = pickSpeechVoice();
+        utterance.lang = voice && voice.lang ? voice.lang : "ko-KR";
+        if (voice) utterance.voice = voice;
+        utterance.rate = speechState.rate;
+        utterance.pitch = 1;
+        utterance.onstart = function () {
+          if (speechState.pendingRequestId !== requestId) return;
+          speechState.activeUtterance = utterance;
+          speechState.speaking = true;
+          updateReadButtonState();
+        };
+        utterance.onend = function () {
+          if (speechState.activeUtterance !== utterance) return;
+          speechState.activeUtterance = null;
+          speechState.speaking = false;
+          updateReadButtonState();
+        };
+        utterance.onerror = function () {
+          if (speechState.activeUtterance !== utterance) return;
+          speechState.activeUtterance = null;
+          speechState.speaking = false;
+          updateReadButtonState();
+        };
+        speechState.activeUtterance = utterance;
+        window.speechSynthesis.speak(utterance);
+      }, 80);
     }
     function refreshProgress() {
       var rl=state.currentQueue.length,cs=rl?Math.min(state.currentIndex+1,rl):0;
@@ -1885,6 +2002,18 @@
       e.stopPropagation();
       if(typeof e.stopImmediatePropagation==="function")e.stopImmediatePropagation();
     }
+    function handleWaitingForNextShortcut(e){
+      if(e.key==="ArrowUp"&&!elements.retryButton.disabled){retryCurrentSentence();return true;}
+      if(e.key==="ArrowRight"&&!elements.nextButton.disabled){moveToNextSentence();return true;}
+      return false;
+    }
+    function handleActivePracticeShortcut(e){
+      if(e.key==="ArrowLeft"){moveToPreviousSentence();return true;}
+      if(e.key==="ArrowDown"){speakCurrentSentence();return true;}
+      if(e.key==="ArrowRight"){skipCurrentSentence();return true;}
+      if(e.key===" "||e.code==="Space"){hideAndWrite();return true;}
+      return false;
+    }
     function handlePracticeShortcuts(e){
       if(isHintShortcut(e)&&canShowHint()){
         consumeShortcutEvent(e);showHint();return;
@@ -1897,25 +2026,9 @@
         return;
       }
       consumeShortcutEvent(e);
-      if(state.waitingForNext&&!elements.retryButton.disabled&&e.key==="ArrowUp"){
-        retryCurrentSentence();return;
-      }
-      if(state.waitingForNext&&!elements.nextButton.disabled&&e.key==="ArrowRight"){
-        moveToNextSentence();return;
-      }
-      if(state.waitingForNext||elements.sentenceActionRow.hidden)return;
-      if(e.key==="ArrowLeft"){
-        moveToPreviousSentence();return;
-      }
-      if(e.key==="ArrowDown"){
-        speakCurrentSentence();return;
-      }
-      if(e.key==="ArrowRight"){
-        skipCurrentSentence();return;
-      }
-      if(e.key===" "||e.code==="Space"){
-        hideAndWrite();
-      }
+      if(state.waitingForNext){handleWaitingForNextShortcut(e);return;}
+      if(elements.sentenceActionRow.hidden)return;
+      handleActivePracticeShortcut(e);
     }
     function suppressShortcutKeyup(e){
       if(!shouldOwnPracticeShortcut(e))return;
@@ -1977,12 +2090,16 @@
       if(e.isComposing||e.keyCode===229)return;
       if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
         e.preventDefault();
+        e.stopPropagation();
+        if(typeof e.stopImmediatePropagation==="function")e.stopImmediatePropagation();
         if(state.waitingForNext&&!elements.nextButton.disabled)moveToNextSentence();
         else submitAnswer();
         return;
       }
       if(e.key==="Enter"){
         e.preventDefault();
+        e.stopPropagation();
+        if(typeof e.stopImmediatePropagation==="function")e.stopImmediatePropagation();
         if(state.waitingForNext&&!elements.nextButton.disabled){moveToNextSentence();return;}
         var inputs=Array.from(getClozeInputs());
         var idx=inputs.indexOf(t);

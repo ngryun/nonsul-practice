@@ -379,6 +379,10 @@
       border-radius: var(--radius-sm);
       background: rgba(247,243,239,0.78);
       color: var(--muted);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
       font-family: 'Noto Serif KR', "AppleMyungjo","Nanum Myeongjo",serif;
       font-size: 0.92rem;
       line-height: 1.74;
@@ -386,6 +390,140 @@
       word-break: keep-all;
     }
     .history-entry + .history-entry { margin-top: 8px; }
+    .history-entry-body {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .history-entry-text {
+      min-width: 0;
+    }
+    .history-entry-text .history-token {
+      display: inline;
+      border-radius: 4px;
+      padding: 0 2px;
+      margin: 0 -2px;
+    }
+    .history-entry-text .history-token.user-highlight {
+      box-shadow: inset 0 -0.72em 0 rgba(253, 224, 71, 0.42);
+      color: var(--text);
+    }
+    .history-entry.is-hard {
+      border-color: rgba(245,158,11,0.28);
+      background: linear-gradient(180deg, rgba(255,251,235,0.96), rgba(255,247,237,0.98));
+      box-shadow: 0 10px 24px rgba(245,158,11,0.1);
+      color: var(--text);
+    }
+    .history-entry-side {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      min-width: 30px;
+    }
+    .history-entry-difficulty {
+      display: inline-flex;
+    }
+    .history-entry-hard-button {
+      width: 28px;
+      min-width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid rgba(212,132,154,0.16);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .history-entry-hard-button:hover:not(:disabled) {
+      background: rgba(255,241,245,0.95);
+      border-color: rgba(212,132,154,0.32);
+      color: var(--accent);
+    }
+    .history-entry-hard-button.is-active {
+      background: #fffbeb;
+      border-color: rgba(245,158,11,0.28);
+      color: #d97706;
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+    }
+    .history-entry-hard-button .button-icon {
+      width: 14px;
+      height: 14px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .history-entry-audio {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+    .history-entry-audio-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 26px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      border: 1px solid rgba(154,138,133,0.18);
+      background: rgba(255,255,255,0.72);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .history-entry-audio-status.is-recorded {
+      border-color: rgba(212,132,154,0.28);
+      background: rgba(255,241,245,0.95);
+      color: var(--accent);
+    }
+    .history-entry-audio-status.is-pending {
+      border-style: dashed;
+      background: rgba(255,255,255,0.64);
+    }
+    .history-entry-audio-button {
+      width: 30px;
+      min-width: 30px;
+      height: 30px;
+      padding: 0;
+      border: 1px solid rgba(212,132,154,0.16);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .history-entry-audio-button:hover:not(:disabled) {
+      background: var(--accent-light);
+      border-color: rgba(212,132,154,0.32);
+      color: var(--accent);
+    }
+    .history-entry-audio-button.is-active {
+      background: var(--accent-light);
+      border-color: rgba(212,132,154,0.34);
+      color: var(--accent);
+    }
+    .history-entry-audio-button .button-icon {
+      width: 15px;
+      height: 15px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     .history-entry.is-latest {
       border-color: rgba(212,132,154,0.32);
       background: rgba(255,241,245,0.92);
@@ -443,6 +581,21 @@
       font-size: 1.24rem; line-height: 1.72;
       border-left: 3px solid var(--accent); padding-left: 12px;
     }
+    .target-sentence.is-markable { cursor: default; }
+    .target-sentence .sentence-token {
+      display: inline;
+      border-radius: 4px;
+      padding: 0 2px;
+      margin: 0 -2px;
+      transition: background-color var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast);
+    }
+    .target-sentence.is-markable .sentence-token { cursor: pointer; }
+    .target-sentence.is-markable .sentence-token:hover {
+      background: rgba(253, 224, 71, 0.16);
+    }
+    .target-sentence .sentence-token.user-highlight {
+      box-shadow: inset 0 -0.72em 0 rgba(253, 224, 71, 0.48);
+    }
     .target-sentence .diff-mark {
       text-decoration: underline dotted rgba(214, 110, 90, 0.85);
       text-decoration-thickness: 2px;
@@ -458,6 +611,12 @@
       box-shadow: inset 0 -0.28em 0 rgba(251, 191, 36, 0.32);
       padding: 0 2px;
       font-weight: 700;
+    }
+    .target-sentence .keyword-mark.user-highlight {
+      box-shadow: inset 0 -0.28em 0 rgba(251, 191, 36, 0.32), inset 0 -0.74em 0 rgba(253, 224, 71, 0.4);
+    }
+    .target-sentence .diff-mark.user-highlight {
+      box-shadow: inset 0 -0.72em 0 rgba(253, 224, 71, 0.38);
     }
 
     /* Sentence memorize state */
@@ -501,6 +660,21 @@
       padding-inline: 14px;
       white-space: nowrap;
     }
+    .sentence-action-row .record-button.is-recording {
+      background: #fff1f2;
+      border-color: #fb7185;
+      color: #be123c;
+    }
+    .recording-hint {
+      flex: 1 0 100%;
+      margin: 2px 0 0;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .recording-hint[hidden] { display: none; }
+    .recording-hint.is-recording { color: #be123c; font-weight: 600; }
+    .recording-hint.is-ready { color: var(--accent); }
     .sr-only {
       position: absolute;
       width: 1px;
@@ -582,23 +756,46 @@
     }
     button .shortcut-hint { margin-left: 6px; }
 
-    /* Difficulty buttons */
-    .difficulty-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+    /* Difficulty toggle */
+    .difficulty-row { display: flex; justify-content: flex-end; margin-top: 8px; }
     .difficulty-row[hidden] { display: none; }
-    .difficulty-label { font-size: 0.76rem; font-weight: 600; color: var(--muted); margin-right: 2px; }
-    .difficulty-btn {
-      padding: 4px 12px; font-size: 0.78rem; font-weight: 600;
-      border: 1.5px solid var(--line); border-radius: 100px; background: #fff;
-      cursor: pointer; transition: all var(--transition-fast);
+    .difficulty-toggle-button {
+      width: 28px;
+      min-width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid rgba(212,132,154,0.16);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
     }
-    .difficulty-btn:hover:not(:disabled) { transform: none; box-shadow: none; }
-    .difficulty-btn.selected { color: #fff; }
-    .difficulty-btn[data-level="easy"] { color: var(--good); border-color: var(--good-border); }
-    .difficulty-btn[data-level="easy"]:hover,.difficulty-btn[data-level="easy"].selected { background: var(--good); color: #fff; border-color: var(--good); }
-    .difficulty-btn[data-level="normal"] { color: #92400e; border-color: #fde68a; }
-    .difficulty-btn[data-level="normal"]:hover,.difficulty-btn[data-level="normal"].selected { background: #f59e0b; color: #fff; border-color: #f59e0b; }
-    .difficulty-btn[data-level="hard"] { color: var(--bad); border-color: var(--bad-border); }
-    .difficulty-btn[data-level="hard"]:hover,.difficulty-btn[data-level="hard"].selected { background: var(--bad); color: #fff; border-color: var(--bad); }
+    .difficulty-toggle-button:hover:not(:disabled) {
+      background: rgba(255,241,245,0.95);
+      border-color: rgba(212,132,154,0.32);
+      color: var(--accent);
+      transform: none;
+      box-shadow: none;
+    }
+    .difficulty-toggle-button.is-active {
+      background: #fffbeb;
+      border-color: rgba(245,158,11,0.28);
+      color: #d97706;
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+    }
+    .difficulty-toggle-button .button-icon {
+      width: 14px;
+      height: 14px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
     /* Heatmap panel */
     .heatmap-panel {
@@ -916,6 +1113,9 @@
                   <path d="M18 6a8.5 8.5 0 0 1 0 12"></path>
                 </svg>
               </button>
+              <button id="recordSentenceButton" class="button-secondary compact-button record-button" type="button" aria-label="현재 문장 녹음" title="현재 문장 녹음"></button>
+              <button id="playSentenceRecordingButton" class="button-secondary icon-button" type="button" aria-label="저장된 녹음 재생" title="저장된 녹음 재생" aria-pressed="false"></button>
+              <button id="deleteSentenceRecordingButton" class="button-secondary icon-button" type="button" aria-label="저장된 녹음 삭제" title="저장된 녹음 삭제"></button>
               <button id="skipSentenceButton" class="button-secondary icon-button" type="button" aria-label="다음 문장으로 가기" title="다음 문장으로 가기">&rarr;</button>
               <div class="speech-rate-control">
                 <label for="readSpeedSelect" class="sr-only">읽기 속도</label>
@@ -928,6 +1128,7 @@
               </div>
               <button id="stageToggleButton" class="button-secondary compact-button" type="button" title="빈칸 모드로 먼저 연습하거나, 전체 받아쓰기로 바로 갑니다.">🧩 빈칸 먼저</button>
               <button id="memorizeBtn" class="button-primary memorize-btn" type="button">가리고 쓰기 <span class="shortcut-hint">Space</span></button>
+              <p id="recordingHint" class="recording-hint" hidden></p>
             </div>
           </div>
 
@@ -956,10 +1157,9 @@
               <h3 id="feedbackTitle" class="feedback-title">아직 시작 전입니다.</h3>
               <p id="feedbackText" class="feedback-text">위에 모범 답안을 붙여넣고 연습을 시작하면, 한 문장씩 읽고 기억해서 쓸 수 있습니다.</p>
               <div id="difficultyRow" class="difficulty-row" hidden>
-                <span class="difficulty-label">이 문장은?</span>
-                <button class="difficulty-btn" data-level="easy" type="button">쉬움</button>
-                <button class="difficulty-btn" data-level="normal" type="button">보통</button>
-                <button class="difficulty-btn" data-level="hard" type="button">어려움</button>
+                <button id="difficultyToggleButton" class="difficulty-toggle-button" data-difficulty-toggle type="button" aria-pressed="false" aria-label="현재 문장을 중요 표시" title="중요 표시">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 5.5h9a1 1 0 0 1 1 1V19l-5-3-5 3V6.5a1 1 0 0 1 1-1Z"></path></svg>
+                </button>
               </div>
             </div>
           </div>
@@ -1125,7 +1325,10 @@
       }
 
       var time = 0;
+      var sakuraAnimationId = null;
       function animate() {
+        sakuraAnimationId = null;
+        if (document.hidden) return;
         time += 0.016;
         mouseWindX += (mouseVX * 0.03 - mouseWindX) * 0.015;
         mouseWindY += (mouseVY * 0.015 - mouseWindY) * 0.015;
@@ -1196,9 +1399,22 @@
           );
         }
 
-        requestAnimationFrame(animate);
+        sakuraAnimationId = requestAnimationFrame(animate);
       }
-      animate();
+      function startSakuraAnimation() {
+        if (sakuraAnimationId !== null || document.hidden) return;
+        sakuraAnimationId = requestAnimationFrame(animate);
+      }
+      function stopSakuraAnimation() {
+        if (sakuraAnimationId === null) return;
+        cancelAnimationFrame(sakuraAnimationId);
+        sakuraAnimationId = null;
+      }
+      document.addEventListener('visibilitychange', function() {
+        if (document.hidden) stopSakuraAnimation();
+        else startSakuraAnimation();
+      });
+      startSakuraAnimation();
     })();
 
     // ═══════════════════════════════════════════════════════════
@@ -1223,6 +1439,10 @@
       sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
       clozeDisplay: $("clozeDisplay"), stageBadge: $("stageBadge"),
       stageToggleButton: $("stageToggleButton"),
+      recordSentenceButton: $("recordSentenceButton"),
+      playSentenceRecordingButton: $("playSentenceRecordingButton"),
+      deleteSentenceRecordingButton: $("deleteSentenceRecordingButton"),
+      recordingHint: $("recordingHint"),
       heatmapPanel: $("heatmapPanel"), heatmapBadge: $("heatmapBadge"),
       heatmapList: $("heatmapList"), heatmapPreview: $("heatmapPreview"),
       heatmapClearBtn: $("heatmapClearBtn"),
@@ -1238,7 +1458,7 @@
       hintDisplay: $("hintDisplay"), hintText: $("hintText"), hintLevel: $("hintLevel"),
       feedbackCard: $("feedbackCard"), feedbackIcon: $("feedbackIcon"),
       feedbackTitle: $("feedbackTitle"), feedbackText: $("feedbackText"),
-      difficultyRow: $("difficultyRow"),
+      difficultyRow: $("difficultyRow"), difficultyToggleButton: $("difficultyToggleButton"),
       compareCard: $("compareCard"), expectedDiff: $("expectedDiff"), actualDiff: $("actualDiff"),
       celebrationOverlay: $("celebrationOverlay"), celebrationStats: $("celebrationStats"),
       celebrationRestart: $("celebrationRestart"), celebrationClose: $("celebrationClose")
@@ -1254,6 +1474,9 @@
       sourceModalSentences: [], sourceModalDirty: false,
       enterAdvanceLocked: false,
       historyCollapsed: false,
+      historyAutoScrollPending: false,
+      sentenceHighlights: {},
+      targetSentenceView: { mode: "static", diffActualText: "" },
       active: false, waitingForNext: false, hintLevel: 0,
       difficultyMap: {}, similarityLog: [],
       currentStage: "full", clozeData: null, currentClozeMode: null, clozePassedForCurrent: false,
@@ -1270,9 +1493,40 @@
       pendingRequestId: 0,
       pendingTimer: null
     };
+    var recordingState = {
+      supported: typeof window !== "undefined" && typeof navigator !== "undefined" &&
+        !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
+        typeof MediaRecorder !== "undefined",
+      storageSupported: typeof window !== "undefined" && typeof indexedDB !== "undefined",
+      storageError: "",
+      dbPromise: null,
+      loading: false,
+      lookupToken: 0,
+      isRecording: false,
+      recorder: null,
+      stream: null,
+      startedAt: 0,
+      elapsedMs: 0,
+      timerId: null,
+      pendingStopMode: "",
+      recordingStorageKey: "",
+      currentStorageKey: "",
+      currentMeta: null,
+      metaByStorageKey: {},
+      pendingMetaByStorageKey: {},
+      playbackAudio: null,
+      playbackUrl: "",
+      playbackStorageKey: ""
+    };
     var ICONS = {
       speaker: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18 6a8.5 8.5 0 0 1 0 12"></path></svg>',
       stop: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect></svg>',
+      mic: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5a2.5 2.5 0 0 1 2.5 2.5v4.5a2.5 2.5 0 0 1-5 0V7a2.5 2.5 0 0 1 2.5-2.5Z"></path><path d="M7.5 11.5a4.5 4.5 0 0 0 9 0"></path><path d="M12 16v3"></path><path d="M9 19h6"></path></svg>',
+      stopRecord: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect></svg>',
+      hard: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 5.5h9a1 1 0 0 1 1 1V19l-5-3-5 3V6.5a1 1 0 0 1 1-1Z"></path></svg>',
+      play: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5Z"></path></svg>',
+      pause: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7v10"></path><path d="M14 7v10"></path></svg>',
+      trash: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7.5h15"></path><path d="M9.5 10.5v6"></path><path d="M14.5 10.5v6"></path><path d="M7.5 7.5V6a1.5 1.5 0 0 1 1.5-1.5h6A1.5 1.5 0 0 1 16.5 6v1.5"></path><path d="m6.5 7.5.7 10.1A1.5 1.5 0 0 0 8.7 19h6.6a1.5 1.5 0 0 0 1.5-1.4l.7-10.1"></path></svg>',
       copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="10" height="10" rx="2"></rect><path d="M6 15V7a2 2 0 0 1 2-2h8"></path></svg>',
       check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7.5 10 17.5l-4.5-4.5"></path></svg>'
     };
@@ -1282,6 +1536,8 @@
     var READ_SPEED_KEY = "nonsul-practice/read-speed";
     var DEFAULT_SPEECH_RATE = 0.95;
     var HEATMAP_KEY = "nonsul-practice/error-heatmap";
+    var SENTENCE_RECORDING_DB_NAME = "nonsul-practice-audio";
+    var SENTENCE_RECORDING_STORE = "sentenceRecordings";
     var CLOZE_ASSIST_BLANK_RATIO = 0.25;
     var CLOZE_ASSIST_MAX_BLANKS = 3;
     var CLOZE_REVIEW_BLANK_RATIO = 0.35;
@@ -1370,6 +1626,10 @@
     }
     function getSentenceKey(text) {
       return hashText(normalizeForGrading(text));
+    }
+    function getSentenceRecordingStorageKey(sentence) {
+      if (!sentence || typeof sentence.id !== "number" || !sentence.text) return "";
+      return String(sentence.id) + ":" + getSentenceKey(sentence.text);
     }
     function normalizeSourceText(text) {
       return String(text || "").replace(/\r\n/g, "\n").trim();
@@ -1472,6 +1732,81 @@
       }
       return { totalDocs: docs.length, docFreq: docFreq };
     }
+    function buildIndexSet(indices) {
+      var set = {};
+      for (var i = 0; i < indices.length; i++) set[indices[i]] = true;
+      return set;
+    }
+    function isSentenceMarkedHard(sentenceId) {
+      return state.difficultyMap[sentenceId] === "hard";
+    }
+    function getSentenceHighlightSet(text) {
+      return state.sentenceHighlights[getSentenceKey(text)] || {};
+    }
+    function toggleSentenceHighlight(text, displayIndex) {
+      if (displayIndex < 0) return;
+      var key = getSentenceKey(text);
+      var set = state.sentenceHighlights[key] || {};
+      if (set[displayIndex]) delete set[displayIndex];
+      else set[displayIndex] = true;
+      if (Object.keys(set).length) state.sentenceHighlights[key] = set;
+      else delete state.sentenceHighlights[key];
+    }
+    function renderHistorySentenceHtml(text) {
+      var info = splitSentenceTokens(text);
+      var highlightSet = getSentenceHighlightSet(text);
+      var html = "";
+      for (var i = 0; i < info.display.length; i++) {
+        var token = escapeHtml(info.display[i]);
+        if (highlightSet[i]) token = '<span class="history-token user-highlight">' + token + '</span>';
+        html += token;
+        if (i < info.display.length - 1) html += " ";
+      }
+      return html;
+    }
+    function renderTargetSentenceTokens(displayTokens, options) {
+      var keywordSet = options && options.keywordSet ? options.keywordSet : {};
+      var diffSet = options && options.diffSet ? options.diffSet : {};
+      var highlightSet = options && options.highlightSet ? options.highlightSet : {};
+      var frag = document.createDocumentFragment();
+      for (var i = 0; i < displayTokens.length; i++) {
+        var token = document.createElement("span");
+        token.className = "sentence-token";
+        if (keywordSet[i]) token.classList.add("keyword-mark");
+        if (diffSet[i]) token.classList.add("diff-mark");
+        if (highlightSet[i]) token.classList.add("user-highlight");
+        token.setAttribute("data-display-index", String(i));
+        token.textContent = displayTokens[i];
+        frag.appendChild(token);
+        if (i < displayTokens.length - 1) frag.appendChild(document.createTextNode(" "));
+      }
+      elements.targetSentence.classList.add("is-markable");
+      elements.targetSentence.title = "어절을 눌러 형광펜 표시/해제";
+      elements.targetSentence.replaceChildren(frag);
+    }
+    function setSentenceHard(sentenceId, isHard) {
+      if (!Number.isFinite(sentenceId)) return;
+      if (isHard) state.difficultyMap[sentenceId] = "hard";
+      else delete state.difficultyMap[sentenceId];
+      refreshStats();
+    }
+    function toggleHistorySentenceHard(sentenceId) {
+      if (!Number.isFinite(sentenceId)) return;
+      setSentenceHard(sentenceId, !isSentenceMarkedHard(sentenceId));
+      renderHistoryPanel();
+    }
+    function setStaticTargetSentence(text) {
+      elements.targetSentence.classList.remove("is-markable");
+      elements.targetSentence.removeAttribute("title");
+      elements.targetSentence.textContent = text;
+      state.targetSentenceView = { mode: "static", diffActualText: "" };
+    }
+    function rerenderCurrentTargetSentence() {
+      var cur = state.currentQueue[state.currentIndex];
+      if (!cur) return;
+      if (state.targetSentenceView.mode === "diff") highlightSentenceDiff(cur.text, state.targetSentenceView.diffActualText || "");
+      else renderSentenceWithKeywords(cur.text);
+    }
     function getSentenceKeywordIndices(text) {
       var info = splitSentenceTokens(text);
       var stats = state.keywordStats;
@@ -1508,19 +1843,11 @@
     }
     function renderSentenceWithKeywords(text) {
       var keywordData = getSentenceKeywordIndices(text);
-      if (!keywordData.indices.length) {
-        elements.targetSentence.textContent = text;
-        return;
-      }
-      var picked = {};
-      for (var i = 0; i < keywordData.indices.length; i++) picked[keywordData.indices[i]] = true;
-      var html = "";
-      for (var j = 0; j < keywordData.info.display.length; j++) {
-        var token = escapeHtml(keywordData.info.display[j]);
-        html += picked[j] ? ('<span class="keyword-mark">' + token + '</span>') : token;
-        if (j < keywordData.info.display.length - 1) html += " ";
-      }
-      elements.targetSentence.innerHTML = html;
+      state.targetSentenceView = { mode: "keyword", diffActualText: "" };
+      renderTargetSentenceTokens(keywordData.info.display, {
+        keywordSet: buildIndexSet(keywordData.indices),
+        highlightSet: getSentenceHighlightSet(text)
+      });
     }
     function getTokenDiffIndices(expectedText, actualText) {
       var info = splitSentenceTokens(expectedText);
@@ -1548,15 +1875,11 @@
     }
     function highlightSentenceDiff(expectedText, actualText) {
       var diff = getTokenDiffIndices(expectedText, actualText);
-      var set = {};
-      for (var i = 0; i < diff.indices.length; i++) set[diff.indices[i]] = true;
-      var html = "";
-      for (var j = 0; j < diff.info.display.length; j++) {
-        var tok = escapeHtml(diff.info.display[j]);
-        html += set[j] ? ('<u class="diff-mark">' + tok + '</u>') : tok;
-        if (j < diff.info.display.length - 1) html += " ";
-      }
-      elements.targetSentence.innerHTML = html;
+      state.targetSentenceView = { mode: "diff", diffActualText: actualText || "" };
+      renderTargetSentenceTokens(diff.info.display, {
+        diffSet: buildIndexSet(diff.indices),
+        highlightSet: getSentenceHighlightSet(expectedText)
+      });
     }
     function clearSentenceDiff() {
       var cur = state.currentQueue[state.currentIndex];
@@ -1778,11 +2101,15 @@
       var btn = elements.stageToggleButton;
       if (!btn) return;
       if (state.currentStage === "cloze") {
-        btn.textContent = "💪 전체로"; btn.classList.add("is-cloze");
+        btn.innerHTML = '💪 전체로 <span class="shortcut-hint">A</span>'; btn.classList.add("is-cloze");
+        btn.title = "전체 받아쓰기로 전환 (A)";
+        btn.setAttribute("aria-label", "전체 받아쓰기로 전환 (A)");
       } else {
-        btn.textContent = "🧩 빈칸 먼저"; btn.classList.remove("is-cloze");
+        btn.innerHTML = '🧩 빈칸 먼저 <span class="shortcut-hint">P</span>'; btn.classList.remove("is-cloze");
+        btn.title = "빈칸 모드로 먼저 연습 (P)";
+        btn.setAttribute("aria-label", "빈칸 모드로 먼저 연습 (P)");
       }
-      btn.disabled = !state.active || (state.waitingForNext && state.currentStage !== "cloze");
+      btn.disabled = !state.active || (state.waitingForNext && state.currentStage !== "cloze") || recordingState.isRecording || recordingState.loading;
     }
     function resetCurrentSentenceForFullStage(message) {
       clearClozeMarks();
@@ -1821,7 +2148,7 @@
       return { stage: "full", clozeMode: null };
     }
     function toggleStage() {
-      if (!state.active || (state.waitingForNext && state.currentStage !== "cloze")) return;
+      if (!state.active || (state.waitingForNext && state.currentStage !== "cloze") || recordingState.isRecording || recordingState.loading) return;
       if (state.currentStage === "cloze") {
         resetCurrentSentenceForFullStage("같은 문장을 전체 받아쓰기로 바꿨습니다. 읽은 뒤 가리고 써보세요.");
         setFeedback("전체 받아쓰기로 전환했습니다.", "빈칸 결과와 상관없이 같은 문장을 전체로 이어서 연습할 수 있습니다.", "", "write");
@@ -1951,6 +2278,508 @@
       speechState.voices = window.speechSynthesis.getVoices();
       updateReadButtonState();
     }
+    function formatRecordingDuration(ms) {
+      var totalSeconds = Math.max(0, Math.round((ms || 0) / 1000));
+      var minutes = Math.floor(totalSeconds / 60);
+      var seconds = totalSeconds % 60;
+      return String(minutes) + ":" + String(seconds).padStart(2, "0");
+    }
+    function getCurrentSentence() {
+      return state.currentQueue[state.currentIndex] || null;
+    }
+    function getCurrentSentenceRecordingStorageKey() {
+      return getSentenceRecordingStorageKey(getCurrentSentence());
+    }
+    function normalizeSentenceRecordingMeta(record) {
+      if (!record || !record.storageKey) return null;
+      return {
+        storageKey: record.storageKey,
+        durationMs: record.durationMs || 0,
+        updatedAt: record.updatedAt || 0,
+        mimeType: record.mimeType || ""
+      };
+    }
+    function getCachedSentenceRecordingMeta(storageKey) {
+      if (!storageKey) return undefined;
+      if (!Object.prototype.hasOwnProperty.call(recordingState.metaByStorageKey, storageKey)) return undefined;
+      return recordingState.metaByStorageKey[storageKey];
+    }
+    function cacheSentenceRecordingMeta(storageKey, record) {
+      if (!storageKey) return null;
+      var meta = normalizeSentenceRecordingMeta(record);
+      recordingState.metaByStorageKey[storageKey] = meta;
+      return meta;
+    }
+    function requestHistoryRecordingMeta(entries) {
+      if (!recordingState.storageSupported || !entries || !entries.length) return;
+      var lookups = [];
+      for (var i = 0; i < entries.length; i++) {
+        var storageKey = getSentenceRecordingStorageKey(entries[i]);
+        if (!storageKey) continue;
+        if (getCachedSentenceRecordingMeta(storageKey) !== undefined) continue;
+        if (recordingState.pendingMetaByStorageKey[storageKey]) continue;
+        recordingState.pendingMetaByStorageKey[storageKey] = true;
+        lookups.push(
+          readSentenceRecording(storageKey)
+            .then(function(record) {
+              if (record && record.storageKey) cacheSentenceRecordingMeta(record.storageKey, record);
+            })
+            .catch(function() {})
+            .finally((function(key) {
+              return function() {
+                if (getCachedSentenceRecordingMeta(key) === undefined) cacheSentenceRecordingMeta(key, null);
+                delete recordingState.pendingMetaByStorageKey[key];
+              };
+            })(storageKey))
+        );
+      }
+      if (!lookups.length) return;
+      Promise.all(lookups).then(function() {
+        if (elements.historyPanel && !elements.historyPanel.hidden) renderHistoryPanel();
+      });
+    }
+    function refreshHistoryRecordingUi() {
+      if (elements.historyPanel && !elements.historyPanel.hidden) renderHistoryPanel();
+    }
+    function stopRecordingTimer() {
+      if (recordingState.timerId) {
+        clearInterval(recordingState.timerId);
+        recordingState.timerId = null;
+      }
+    }
+    function startRecordingTimer() {
+      stopRecordingTimer();
+      recordingState.timerId = setInterval(function() {
+        recordingState.elapsedMs = Math.max(0, Date.now() - recordingState.startedAt);
+        updateSentenceRecordingButtons();
+      }, 250);
+    }
+    function isCurrentSentenceRecordingActive() {
+      var currentKey = getCurrentSentenceRecordingStorageKey();
+      return !!(recordingState.isRecording && currentKey && recordingState.recordingStorageKey === currentKey);
+    }
+    function isCurrentSentencePlaybackActive() {
+      var currentKey = getCurrentSentenceRecordingStorageKey();
+      return !!(recordingState.playbackAudio && currentKey && recordingState.playbackStorageKey === currentKey);
+    }
+    function openSentenceRecordingDb() {
+      if (!recordingState.storageSupported) return Promise.reject(new Error("indexeddb unavailable"));
+      if (!recordingState.dbPromise) {
+        recordingState.dbPromise = new Promise(function(resolve, reject) {
+          var request = indexedDB.open(SENTENCE_RECORDING_DB_NAME, 1);
+          request.onupgradeneeded = function() {
+            var db = request.result;
+            if (!db.objectStoreNames.contains(SENTENCE_RECORDING_STORE)) {
+              db.createObjectStore(SENTENCE_RECORDING_STORE, { keyPath: "storageKey" });
+            }
+          };
+          request.onsuccess = function() { resolve(request.result); };
+          request.onerror = function() { reject(request.error || new Error("indexeddb open failed")); };
+          request.onblocked = function() { reject(new Error("indexeddb blocked")); };
+        }).catch(function(error) {
+          recordingState.dbPromise = null;
+          throw error;
+        });
+      }
+      return recordingState.dbPromise;
+    }
+    function readSentenceRecording(storageKey) {
+      if (!storageKey) return Promise.resolve(null);
+      return openSentenceRecordingDb().then(function(db) {
+        return new Promise(function(resolve, reject) {
+          var tx = db.transaction(SENTENCE_RECORDING_STORE, "readonly");
+          var store = tx.objectStore(SENTENCE_RECORDING_STORE);
+          var request = store.get(storageKey);
+          request.onsuccess = function() { resolve(request.result || null); };
+          request.onerror = function() { reject(request.error || new Error("recording read failed")); };
+        });
+      });
+    }
+    function writeSentenceRecording(record) {
+      return openSentenceRecordingDb().then(function(db) {
+        return new Promise(function(resolve, reject) {
+          var tx = db.transaction(SENTENCE_RECORDING_STORE, "readwrite");
+          var store = tx.objectStore(SENTENCE_RECORDING_STORE);
+          var request = store.put(record);
+          request.onsuccess = function() { resolve(record); };
+          request.onerror = function() { reject(request.error || new Error("recording write failed")); };
+        });
+      });
+    }
+    function removeSentenceRecording(storageKey) {
+      return openSentenceRecordingDb().then(function(db) {
+        return new Promise(function(resolve, reject) {
+          var tx = db.transaction(SENTENCE_RECORDING_STORE, "readwrite");
+          var store = tx.objectStore(SENTENCE_RECORDING_STORE);
+          var request = store.delete(storageKey);
+          request.onsuccess = function() { resolve(); };
+          request.onerror = function() { reject(request.error || new Error("recording delete failed")); };
+        });
+      });
+    }
+    function releaseRecordingStream() {
+      if (!recordingState.stream) return;
+      recordingState.stream.getTracks().forEach(function(track) { track.stop(); });
+      recordingState.stream = null;
+    }
+    function clearSentencePlaybackState(skipUpdate) {
+      var audio = recordingState.playbackAudio;
+      if (audio) {
+        audio.onended = null;
+        audio.onerror = null;
+        audio.pause();
+        audio.removeAttribute("src");
+        try { audio.load(); } catch (e) {}
+      }
+      recordingState.playbackAudio = null;
+      if (recordingState.playbackUrl) URL.revokeObjectURL(recordingState.playbackUrl);
+      recordingState.playbackUrl = "";
+      recordingState.playbackStorageKey = "";
+      if (!skipUpdate) updateSentenceRecordingButtons();
+      refreshHistoryRecordingUi();
+    }
+    function stopSentencePlayback() {
+      clearSentencePlaybackState(false);
+    }
+    function getSentenceRecorderMimeType() {
+      if (!recordingState.supported || typeof MediaRecorder.isTypeSupported !== "function") return "";
+      var candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/ogg;codecs=opus"
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
+      }
+      return "";
+    }
+    function createSentenceRecorder(stream) {
+      var mimeType = getSentenceRecorderMimeType();
+      if (mimeType) return new MediaRecorder(stream, { mimeType: mimeType });
+      return new MediaRecorder(stream);
+    }
+    function getSentenceRecordingSupportMessage() {
+      if (!recordingState.supported) return "현재 브라우저에서는 마이크 녹음을 사용할 수 없습니다.";
+      if (!recordingState.storageSupported) return "현재 브라우저에서는 로컬 음성 저장을 사용할 수 없습니다.";
+      if (recordingState.storageError) return recordingState.storageError;
+      return "";
+    }
+    function updateSentenceRecordingButtons() {
+      var recordBtn = elements.recordSentenceButton;
+      var playBtn = elements.playSentenceRecordingButton;
+      var deleteBtn = elements.deleteSentenceRecordingButton;
+      var hint = elements.recordingHint;
+      if (!recordBtn || !playBtn || !deleteBtn || !hint) return;
+      var controlsVisible = state.active && !elements.sentenceActionRow.hidden;
+      var currentKey = getCurrentSentenceRecordingStorageKey();
+      var supportMessage = getSentenceRecordingSupportMessage();
+      var isRecording = !!(recordingState.isRecording && currentKey && recordingState.recordingStorageKey === currentKey);
+      var isPlaying = !!(recordingState.playbackAudio && currentKey && recordingState.playbackStorageKey === currentKey);
+      var hasRecording = !!(recordingState.currentMeta && recordingState.currentMeta.storageKey === currentKey);
+      var isBusy = recordingState.loading;
+
+      recordBtn.innerHTML = isRecording ? (ICONS.stopRecord + "<span>저장</span>") : (ICONS.mic + "<span>" + (hasRecording ? "다시 녹음" : "녹음") + "</span>");
+      recordBtn.classList.toggle("is-recording", isRecording);
+      recordBtn.disabled = !controlsVisible || !!supportMessage || isBusy;
+      recordBtn.title = supportMessage || (isRecording ? "녹음을 멈추고 저장" : "현재 문장 녹음");
+      recordBtn.setAttribute("aria-label", recordBtn.title);
+
+      playBtn.innerHTML = isPlaying ? ICONS.pause : ICONS.play;
+      playBtn.classList.toggle("is-active", isPlaying);
+      playBtn.disabled = !controlsVisible || !!supportMessage || isBusy || !hasRecording || isRecording;
+      playBtn.title = supportMessage || (isPlaying ? "저장된 녹음 멈추기" : "저장된 녹음 재생");
+      playBtn.setAttribute("aria-label", playBtn.title);
+      playBtn.setAttribute("aria-pressed", isPlaying ? "true" : "false");
+
+      deleteBtn.innerHTML = ICONS.trash;
+      deleteBtn.disabled = !controlsVisible || !!supportMessage || isBusy || !hasRecording || isRecording;
+      deleteBtn.title = supportMessage || "저장된 녹음 삭제";
+      deleteBtn.setAttribute("aria-label", deleteBtn.title);
+
+      hint.hidden = !controlsVisible;
+      hint.className = "recording-hint" + (isRecording ? " is-recording" : hasRecording ? " is-ready" : "");
+      if (supportMessage) hint.textContent = supportMessage;
+      else if (isBusy) hint.textContent = "녹음 정보를 준비하는 중입니다.";
+      else if (isRecording) hint.textContent = "녹음 중 " + formatRecordingDuration(recordingState.elapsedMs) + " · 이 문장 음성은 이 브라우저에만 저장됩니다.";
+      else if (hasRecording) hint.textContent = "저장된 녹음 " + formatRecordingDuration(recordingState.currentMeta.durationMs || 0) + " · 이 브라우저에만 저장됩니다.";
+      else hint.textContent = "녹음은 이 브라우저에만 저장됩니다.";
+    }
+    function refreshCurrentSentenceRecordingState() {
+      var current = getCurrentSentence();
+      var storageKey = state.active ? getSentenceRecordingStorageKey(current) : "";
+      recordingState.lookupToken += 1;
+      var token = recordingState.lookupToken;
+      recordingState.currentStorageKey = storageKey;
+      if (!storageKey) {
+        recordingState.currentMeta = null;
+        recordingState.loading = false;
+        updateSentenceRecordingButtons();
+        return Promise.resolve(null);
+      }
+      if (!recordingState.storageSupported) {
+        recordingState.currentMeta = null;
+        recordingState.loading = false;
+        updateSentenceRecordingButtons();
+        return Promise.resolve(null);
+      }
+      if (recordingState.isRecording && recordingState.recordingStorageKey === storageKey) {
+        recordingState.currentMeta = null;
+        updateSentenceRecordingButtons();
+        return Promise.resolve(null);
+      }
+      recordingState.currentMeta = null;
+      recordingState.loading = true;
+      updateSentenceRecordingButtons();
+      return readSentenceRecording(storageKey).then(function(record) {
+        if (token !== recordingState.lookupToken || recordingState.currentStorageKey !== storageKey) return record;
+        recordingState.loading = false;
+        recordingState.storageError = "";
+        recordingState.currentMeta = cacheSentenceRecordingMeta(storageKey, record);
+        updateSentenceRecordingButtons();
+        return record;
+      }).catch(function(error) {
+        if (token !== recordingState.lookupToken || recordingState.currentStorageKey !== storageKey) return null;
+        recordingState.loading = false;
+        recordingState.currentMeta = getCachedSentenceRecordingMeta(storageKey) || null;
+        recordingState.storageError = "로컬 음성 저장소를 열지 못했습니다.";
+        updateSentenceRecordingButtons();
+        return null;
+      });
+    }
+    function finishSentenceRecording(mode) {
+      if (!recordingState.recorder || recordingState.recorder.state === "inactive") return false;
+      recordingState.pendingStopMode = mode || "manual";
+      recordingState.loading = true;
+      stopRecordingTimer();
+      updateSentenceRecordingButtons();
+      try {
+        recordingState.recorder.stop();
+        return true;
+      } catch (error) {
+        recordingState.loading = false;
+        updateSentenceRecordingButtons();
+        return false;
+      }
+    }
+    function finalizeSentenceRecording(chunks, storageKey, sentence) {
+      var stopMode = recordingState.pendingStopMode || "manual";
+      recordingState.pendingStopMode = "";
+      var mimeType = (recordingState.recorder && recordingState.recorder.mimeType) || (chunks[0] && chunks[0].type) || "audio/webm";
+      var blob = chunks.length ? new Blob(chunks, { type: mimeType }) : null;
+      var durationMs = Math.max(0, Date.now() - recordingState.startedAt);
+
+      recordingState.isRecording = false;
+      recordingState.recorder = null;
+      recordingState.recordingStorageKey = "";
+      recordingState.elapsedMs = durationMs;
+      stopRecordingTimer();
+      releaseRecordingStream();
+
+      if (!blob || !blob.size) {
+        recordingState.loading = false;
+        updateSentenceRecordingButtons();
+        if (stopMode === "manual") {
+          setFeedback("녹음을 저장하지 못했습니다.", "녹음 데이터가 비어 있습니다. 다시 시도해 주세요.", "bad", "warning");
+        }
+        return;
+      }
+
+      recordingState.loading = true;
+      updateSentenceRecordingButtons();
+      var savedAt = Date.now();
+      writeSentenceRecording({
+        storageKey: storageKey,
+        sentenceId: sentence.id,
+        sentenceText: sentence.text,
+        mimeType: blob.type || mimeType,
+        durationMs: durationMs,
+        updatedAt: savedAt,
+        blob: blob
+      }).then(function() {
+        recordingState.loading = false;
+        recordingState.storageError = "";
+        if (recordingState.currentStorageKey === storageKey) {
+          recordingState.currentMeta = cacheSentenceRecordingMeta(storageKey, {
+            storageKey: storageKey,
+            durationMs: durationMs,
+            updatedAt: savedAt,
+            mimeType: blob.type || mimeType
+          });
+        } else {
+          cacheSentenceRecordingMeta(storageKey, {
+            storageKey: storageKey,
+            durationMs: durationMs,
+            updatedAt: savedAt,
+            mimeType: blob.type || mimeType
+          });
+        }
+        refreshSentenceActionButtons();
+        updateSentenceRecordingButtons();
+        refreshHistoryRecordingUi();
+        if (stopMode === "manual") {
+          setFeedback("녹음을 저장했습니다.", "이 문장의 음성은 이 브라우저에만 저장됩니다.", "", "success");
+        }
+      }).catch(function() {
+        recordingState.loading = false;
+        recordingState.storageError = "녹음을 브라우저에 저장하지 못했습니다.";
+        refreshSentenceActionButtons();
+        updateSentenceRecordingButtons();
+        if (stopMode === "manual") {
+          setFeedback("녹음을 저장하지 못했습니다.", "브라우저의 로컬 저장 공간에 접근할 수 없습니다.", "bad", "warning");
+        }
+      });
+    }
+    function toggleSentenceRecording() {
+      if (recordingState.isRecording) {
+        finishSentenceRecording("manual");
+        return;
+      }
+      var current = getCurrentSentence();
+      if (!state.active || !current || !current.text) return;
+      var supportMessage = getSentenceRecordingSupportMessage();
+      if (supportMessage) {
+        setFeedback("녹음을 사용할 수 없습니다.", supportMessage, "bad", "warning");
+        return;
+      }
+      if (recordingState.loading) return;
+      stopSpeaking();
+      stopSentencePlayback();
+      recordingState.loading = true;
+      updateSentenceRecordingButtons();
+      openSentenceRecordingDb().then(function() {
+        return navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
+        });
+      }).then(function(stream) {
+        var recorder;
+        try {
+          recorder = createSentenceRecorder(stream);
+        } catch (error) {
+          stream.getTracks().forEach(function(track) { track.stop(); });
+          throw error;
+        }
+        var storageKey = getSentenceRecordingStorageKey(current);
+        var chunks = [];
+        recordingState.stream = stream;
+        recordingState.recorder = recorder;
+        recordingState.recordingStorageKey = storageKey;
+        recordingState.currentStorageKey = storageKey;
+        recordingState.currentMeta = null;
+        recordingState.startedAt = Date.now();
+        recordingState.elapsedMs = 0;
+        recordingState.loading = false;
+        recordingState.isRecording = true;
+        recorder.addEventListener("dataavailable", function(event) {
+          if (event.data && event.data.size) chunks.push(event.data);
+        });
+        recorder.addEventListener("stop", function() {
+          finalizeSentenceRecording(chunks, storageKey, current);
+        }, { once: true });
+        recorder.start();
+        startRecordingTimer();
+        refreshSentenceActionButtons();
+        updateSentenceRecordingButtons();
+        setFeedback("녹음을 시작했습니다.", "문장을 읽고 저장을 누르면 이 브라우저에만 남습니다.", "", "note");
+      }).catch(function(error) {
+        recordingState.loading = false;
+        recordingState.isRecording = false;
+        recordingState.recorder = null;
+        recordingState.recordingStorageKey = "";
+        releaseRecordingStream();
+        refreshSentenceActionButtons();
+        updateSentenceRecordingButtons();
+        var message = "마이크 접근이 거부되었거나 브라우저가 녹음을 지원하지 않습니다.";
+        if (error && error.name === "NotFoundError") message = "사용 가능한 마이크를 찾지 못했습니다.";
+        else if (error && error.name === "NotReadableError") message = "마이크가 다른 앱에서 사용 중이어서 녹음할 수 없습니다.";
+        else if (error && /indexeddb|storage|blocked/i.test(String(error.message || ""))) message = "브라우저 로컬 저장소를 준비하지 못했습니다.";
+        setFeedback("녹음을 시작하지 못했습니다.", message, "bad", "warning");
+      });
+    }
+    function toggleSentenceRecordingPlaybackByStorageKey(storageKey, emptyMessage) {
+      if (!state.active || !storageKey || recordingState.loading) return;
+      if (recordingState.isRecording) {
+        setFeedback("녹음 중에는 재생할 수 없습니다.", "먼저 현재 녹음을 저장한 뒤 다시 재생해 주세요.", "", "warning");
+        return;
+      }
+      if (recordingState.playbackAudio && recordingState.playbackStorageKey === storageKey) {
+        stopSentencePlayback();
+        return;
+      }
+      recordingState.loading = true;
+      updateSentenceRecordingButtons();
+      readSentenceRecording(storageKey).then(function(record) {
+        if (!record || !record.blob) {
+          recordingState.loading = false;
+          recordingState.currentMeta = cacheSentenceRecordingMeta(storageKey, null);
+          refreshSentenceActionButtons();
+          updateSentenceRecordingButtons();
+          refreshHistoryRecordingUi();
+          setFeedback("저장된 녹음이 없습니다.", emptyMessage || "먼저 이 문장을 녹음해 주세요.", "", "note");
+          return;
+        }
+        stopSpeaking();
+        clearSentencePlaybackState(true);
+        var url = URL.createObjectURL(record.blob);
+        var audio = new Audio(url);
+        recordingState.playbackAudio = audio;
+        recordingState.playbackUrl = url;
+        recordingState.playbackStorageKey = storageKey;
+        recordingState.loading = false;
+        audio.onended = function() { clearSentencePlaybackState(false); };
+        audio.onerror = function() {
+          clearSentencePlaybackState(false);
+          setFeedback("녹음을 재생하지 못했습니다.", "브라우저가 저장된 음성을 열 수 없습니다.", "bad", "warning");
+        };
+        updateSentenceRecordingButtons();
+        refreshHistoryRecordingUi();
+        return audio.play().catch(function() {
+          clearSentencePlaybackState(false);
+          setFeedback("녹음을 재생하지 못했습니다.", "브라우저의 오디오 재생이 차단되었습니다.", "bad", "warning");
+        });
+      }).catch(function() {
+        recordingState.loading = false;
+        updateSentenceRecordingButtons();
+        refreshHistoryRecordingUi();
+        setFeedback("녹음을 불러오지 못했습니다.", "브라우저 로컬 저장소에서 음성을 읽지 못했습니다.", "bad", "warning");
+      });
+    }
+    function playSentenceRecording() {
+      var current = getCurrentSentence();
+      if (!state.active || !current || !current.text) return;
+      toggleSentenceRecordingPlaybackByStorageKey(getSentenceRecordingStorageKey(current), "먼저 이 문장을 녹음해 주세요.");
+    }
+    function playHistorySentenceRecording(storageKey) {
+      if (!storageKey) return;
+      toggleSentenceRecordingPlaybackByStorageKey(storageKey, "이전 문장에는 저장된 녹음이 없습니다.");
+    }
+    function deleteSentenceRecording() {
+      var current = getCurrentSentence();
+      if (!state.active || !current || !current.text || recordingState.loading) return;
+      var storageKey = getSentenceRecordingStorageKey(current);
+      if (!recordingState.currentMeta || recordingState.currentMeta.storageKey !== storageKey) return;
+      if (!confirm("이 문장에 저장된 녹음을 브라우저에서 삭제할까요?")) return;
+      if (recordingState.playbackStorageKey === storageKey) stopSentencePlayback();
+      recordingState.loading = true;
+      updateSentenceRecordingButtons();
+      removeSentenceRecording(storageKey).then(function() {
+        recordingState.loading = false;
+        recordingState.currentMeta = cacheSentenceRecordingMeta(storageKey, null);
+        refreshSentenceActionButtons();
+        updateSentenceRecordingButtons();
+        refreshHistoryRecordingUi();
+        setFeedback("녹음을 삭제했습니다.", "이 문장에 저장된 음성을 브라우저에서 지웠습니다.", "", "close");
+      }).catch(function() {
+        recordingState.loading = false;
+        recordingState.storageError = "브라우저 로컬 저장소에서 녹음을 삭제하지 못했습니다.";
+        updateSentenceRecordingButtons();
+        refreshHistoryRecordingUi();
+        setFeedback("녹음을 삭제하지 못했습니다.", "브라우저 로컬 저장소에 접근할 수 없습니다.", "bad", "warning");
+      });
+    }
     function pickSpeechVoice() {
       if (!speechState.supported) return null;
       var voices = speechState.voices.length ? speechState.voices : window.speechSynthesis.getVoices();
@@ -1974,9 +2803,9 @@
     function updateReadButtonState() {
       var btn = elements.readSentenceButton;
       if (!btn) return;
-      var canRead = speechState.supported && state.active && !elements.sentenceActionRow.hidden;
+      var canRead = speechState.supported && state.active && !elements.sentenceActionRow.hidden && !recordingState.isRecording && !recordingState.loading;
       btn.disabled = !canRead;
-      if (elements.readSpeedSelect) elements.readSpeedSelect.disabled = !speechState.supported;
+      if (elements.readSpeedSelect) elements.readSpeedSelect.disabled = !speechState.supported || recordingState.isRecording || recordingState.loading;
       btn.classList.toggle("is-active", speechState.speaking);
       btn.setAttribute("aria-pressed", speechState.speaking ? "true" : "false");
       btn.innerHTML = speechState.speaking ? ICONS.stop : ICONS.speaker;
@@ -1990,6 +2819,7 @@
         setFeedback("읽기 기능을 사용할 수 없습니다.","현재 브라우저에서 음성 읽기를 지원하지 않습니다.","bad","warning");
         return;
       }
+      if (recordingState.isRecording) return;
       var cur = state.currentQueue[state.currentIndex];
       if (!cur || !cur.text) return;
       if ((speechState.speaking || window.speechSynthesis.speaking) && !forceRestart) {
@@ -2005,6 +2835,7 @@
       window.speechSynthesis.cancel();
       speechState.activeUtterance = null;
       speechState.speaking = true;
+      stopSentencePlayback();
       updateReadButtonState();
       speechState.pendingTimer = setTimeout(function () {
         speechState.pendingTimer = null;
@@ -2122,10 +2953,56 @@
       var contentMax = Math.max(80, mainBottom - contentTop);
       elements.historyPanel.style.maxHeight = panelMax + "px";
       elements.historyContent.style.maxHeight = contentMax + "px";
+      if (state.historyAutoScrollPending && !elements.historyPanel.hidden) {
+        elements.historyContent.scrollTop = elements.historyContent.scrollHeight;
+        state.historyAutoScrollPending = false;
+      }
     }
     function queueHistoryPanelViewportLimit() {
       if (historyPanelMeasureId) cancelAnimationFrame(historyPanelMeasureId);
       historyPanelMeasureId = requestAnimationFrame(updateHistoryPanelViewportLimit);
+    }
+    function renderHistoryEntry(entry, isLatest) {
+      var storageKey = getSentenceRecordingStorageKey(entry);
+      var supportMessage = getSentenceRecordingSupportMessage();
+      var cachedMeta = getCachedSentenceRecordingMeta(storageKey);
+      var isPending = !!(storageKey && cachedMeta === undefined && recordingState.pendingMetaByStorageKey[storageKey]);
+      var hasRecording = !!cachedMeta;
+      var isPlaying = !!(storageKey && recordingState.playbackAudio && recordingState.playbackStorageKey === storageKey);
+      var isHard = isSentenceMarkedHard(entry.id);
+      var statusClass = isPending ? " is-pending" : "";
+      var statusLabel = isPending ? "확인 중" : "없음";
+      var playDisabled = !!supportMessage || recordingState.loading || recordingState.isRecording;
+      var playLabel = isPlaying ? "이전 문장 녹음 멈추기" : "이전 문장 녹음 재생";
+      var hardButtonLabel = isHard ? "이전 문장의 중요 표시 해제" : "이전 문장을 중요 표시";
+      var audioControl = hasRecording
+        ? '<button type="button" class="history-entry-audio-button' + (isPlaying ? ' is-active' : '') + '"' +
+          ' data-history-play="' + escapeHtml(storageKey) + '"' +
+          ' aria-label="' + escapeHtml(playLabel) + '"' +
+          ' title="' + escapeHtml(supportMessage || playLabel) + '"' +
+          (playDisabled ? ' disabled' : '') + '>' +
+          (isPlaying ? ICONS.pause : ICONS.play) +
+          '</button>'
+        : '<span class="history-entry-audio-status' + statusClass + '">' + statusLabel + '</span>';
+      return '<div class="history-entry' + (isLatest ? ' is-latest' : '') + (isHard ? ' is-hard' : '') + '">' +
+        '<div class="history-entry-body">' +
+          '<div class="history-entry-text">' + renderHistorySentenceHtml(entry.text) + '</div>' +
+        '</div>' +
+        '<div class="history-entry-side">' +
+          '<div class="history-entry-difficulty">' +
+            '<button type="button" class="history-entry-hard-button' + (isHard ? ' is-active' : '') + '"' +
+              ' data-history-hard="' + String(entry.id) + '"' +
+              ' aria-pressed="' + (isHard ? 'true' : 'false') + '"' +
+              ' aria-label="' + escapeHtml(hardButtonLabel) + '"' +
+              ' title="' + escapeHtml(isHard ? '중요 해제' : '중요 표시') + '">' +
+              ICONS.hard +
+            '</button>' +
+          '</div>' +
+          '<div class="history-entry-audio">' +
+            audioControl +
+          '</div>' +
+        '</div>' +
+      '</div>';
     }
     function renderHistoryPanel() {
       var entries = getHistoryEntries();
@@ -2140,10 +3017,11 @@
         clearHistoryPanelViewportLimit();
         return;
       }
+      requestHistoryRecordingMeta(entries);
       var latestId = entries.length ? entries[entries.length - 1].id : 0;
       var html = "";
       for (var i = 0; i < entries.length; i++) {
-        html += '<p class="history-entry' + (entries[i].id === latestId ? ' is-latest' : '') + '">' + escapeHtml(entries[i].text) + '</p>';
+        html += renderHistoryEntry(entries[i], entries[i].id === latestId);
       }
       elements.historyEmpty.hidden = true;
       elements.historyContent.innerHTML = html;
@@ -2476,19 +3354,30 @@
     // Difficulty
     function showDifficultyRow(sid){
       elements.difficultyRow.hidden=false;
-      var cur=state.difficultyMap[sid]||null;
-      elements.difficultyRow.querySelectorAll(".difficulty-btn").forEach(function(b){b.classList.toggle("selected",b.getAttribute("data-level")===cur);});
+      updateDifficultyToggleButton(sid);
     }
     function hideDifficultyRow(){elements.difficultyRow.hidden=true;}
-    function setDifficulty(sid,level){
-      state.difficultyMap[sid]=level;
-      elements.difficultyRow.querySelectorAll(".difficulty-btn").forEach(function(b){b.classList.toggle("selected",b.getAttribute("data-level")===level);});
-      refreshStats();
+    function updateDifficultyToggleButton(sentenceId){
+      if (!elements.difficultyToggleButton) return;
+      var isHard = Number.isFinite(sentenceId) && isSentenceMarkedHard(sentenceId);
+      elements.difficultyToggleButton.classList.toggle("is-active", isHard);
+      elements.difficultyToggleButton.setAttribute("aria-pressed", isHard ? "true" : "false");
+      elements.difficultyToggleButton.setAttribute("aria-label", isHard ? "현재 문장의 중요 표시 해제" : "현재 문장을 중요 표시");
+      elements.difficultyToggleButton.title = isHard ? "중요 해제" : "중요 표시";
+    }
+    function toggleCurrentSentenceHard(){
+      var cur = state.currentQueue[state.currentIndex];
+      if (!cur) return;
+      setSentenceHard(cur.id, !isSentenceMarkedHard(cur.id));
+      updateDifficultyToggleButton(cur.id);
+      renderHistoryPanel();
     }
 
     // Memorize flow
     function hideAndWrite(){
       if(!state.active)return;
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
       stopSpeaking();
       if (state.currentStage === "cloze" && state.clozeData) {
         renderClozeDisplay(state.clozeData);
@@ -2513,12 +3402,15 @@
       elements.userInput.disabled=false;elements.checkButton.disabled=false;elements.hintButton.disabled=false;
       elements.userInput.focus();
     }
-    function revealSentence(){stopSpeaking();elements.sentenceCard.classList.remove("memorize","cloze-active","cloze-locked");document.body.classList.remove("cloze-mode");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";updateReadButtonState();}
+    function revealSentence(){finishSentenceRecording("auto");stopSentencePlayback();stopSpeaking();elements.sentenceCard.classList.remove("memorize","cloze-active","cloze-locked");document.body.classList.remove("cloze-mode");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";updateReadButtonState();updateSentenceRecordingButtons();}
     function refreshSentenceActionButtons(){
-      elements.prevSentenceButton.disabled=state.currentIndex<=0;
-      elements.skipSentenceButton.disabled=!state.active;
+      var controlsLocked = recordingState.isRecording || recordingState.loading;
+      elements.prevSentenceButton.disabled=state.currentIndex<=0||controlsLocked;
+      elements.skipSentenceButton.disabled=!state.active||controlsLocked;
+      elements.memorizeBtn.disabled=!state.active||controlsLocked;
       updateReadButtonState();
       updateStageToggleButton();
+      updateSentenceRecordingButtons();
     }
     function hideHint(){state.hintLevel=0;elements.hintDisplay.hidden=true;elements.hintText.textContent="";elements.hintLevel.textContent="";}
     function showHint(){
@@ -2561,7 +3453,10 @@
     }
     function moveToPreviousSentence(){
       if(!state.active||state.waitingForNext||state.currentIndex<=0)return;
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
       hideComparison();hideHint();state.hintLevel=0;
+      state.historyAutoScrollPending = false;
       state.currentIndex-=1;
       setFeedback("이전 문장으로 돌아갑니다.","앞 문장을 다시 읽고 연습할 수 있습니다.","","previous");
       renderCurrentSentence();
@@ -2576,19 +3471,25 @@
     }
     function moveToNextSentence(){
       if(state.gradedAt && Date.now()-state.gradedAt<280)return;
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
       stopSpeaking();
       state.waitingForNext=false;state.gradedAt=0;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
+      state.historyAutoScrollPending = true;
       hideDifficultyRow();hideComparison();state.currentIndex+=1;renderCurrentSentence();
     }
     function renderCurrentSentence(){
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
       stopSpeaking();
       state.waitingForNext=false;elements.nextButton.disabled=true;elements.retryButton.disabled=true;
       hideDifficultyRow();hideHint();
       if(!state.active){
         elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
-        elements.targetSentence.textContent="연습을 시작하면 한 문장씩 여기에 표시됩니다.";
+        setStaticTargetSentence("연습을 시작하면 한 문장씩 여기에 표시됩니다.");
         elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";
         updateReadButtonState();
+        updateSentenceRecordingButtons();
         renderHistoryPanel();
         refreshProgress();refreshStats();return;
       }
@@ -2621,19 +3522,24 @@
       refreshSentenceActionButtons();
       updateStageBadge();updateStageToggleButton();
       renderHistoryPanel();
+      refreshCurrentSentenceRecordingState();
       elements.memorizeBtn.focus();refreshProgress();refreshStats();
     }
     function finishPractice(){
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
       stopSpeaking();
       state.active=false;stopTimer();
       elements.userInput.disabled=true;elements.checkButton.disabled=true;
       elements.nextButton.disabled=true;elements.retryButton.disabled=true;elements.hintButton.disabled=true;
       hideDifficultyRow();elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";
-      elements.targetSentence.textContent="모든 문장을 끝냈습니다.";
+      setStaticTargetSentence("모든 문장을 끝냈습니다.");
       elements.sentenceCard.classList.remove("memorize");
       setFeedback("완료했습니다.","틀린 문장까지 모두 통과했습니다.","good","success");
       hideComparison();hideHint();refreshStats();refreshProgress();
       elements.stageBadge.hidden=true;
+      recordingState.currentMeta = null;
+      updateSentenceRecordingButtons();
       renderHistoryPanel();
       renderHeatmapPanel();
       setPracticeAuxVisibility(false);
@@ -2643,6 +3549,8 @@
     function startPractice(){
       var sentences=splitIntoSentences(elements.sourceText.value);
       if(!sentences.length){alert("먼저 모범 답안을 붙여넣어 주세요.");return;}
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
       stopSpeaking();
       stopTimer();hideCelebration();
       state.sourceSentences=sentences.map(function(t,i){return{id:i+1,text:t}});
@@ -2651,7 +3559,7 @@
       state.currentIndex=0;state.round=1;state.totalAttempts=0;state.correctAttempts=0;state.wrongAttempts=0;
       state.committedHistory=[];state.historyAcceptedCounter=0;
       state.solvedIds=new Set();state.startedAt=Date.now();state.active=true;
-      state.waitingForNext=false;state.hintLevel=0;state.difficultyMap={};state.similarityLog=[];
+      state.waitingForNext=false;state.hintLevel=0;state.difficultyMap={};state.similarityLog=[];state.historyAutoScrollPending=false;
       elements.restartButton.disabled=false;
       startTimer();hideComparison();hideHint();
       setFeedback("연습을 시작합니다.","한 문장씩 읽고 기억한 뒤 써보세요.","","start");
@@ -2782,7 +3690,7 @@
       return (e.ctrlKey||e.metaKey)&&!e.altKey&&(e.code==="Slash"||e.key==="/");
     }
     function isPracticeShortcutKey(e){
-      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter"||e.code==="KeyR"||e.code==="KeyV";
+      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter"||e.code==="KeyR"||e.code==="KeyV"||e.code==="KeyA"||e.code==="KeyP";
     }
     function isPracticeOverlayOpen(){
       return !elements.sourceModal.hidden||!elements.celebrationOverlay.hidden;
@@ -2815,6 +3723,12 @@
         return;
       }
       consumeShortcutEvent(e);
+      if(state.currentStage==="full"&&!elements.stageToggleButton.disabled&&e.code==="KeyP"){
+        toggleStage();return;
+      }
+      if(state.currentStage==="cloze"&&!elements.stageToggleButton.disabled&&e.code==="KeyA"){
+        toggleStage();return;
+      }
       if(state.waitingForNext&&!elements.retryButton.disabled&&(e.key==="ArrowUp"||e.code==="KeyR")){
         retryCurrentSentence();return;
       }
@@ -2848,7 +3762,7 @@
         '<div class="celebration-stat"><span class="celebration-stat-value">'+summary.total+'</span><span class="celebration-stat-label">총 문장</span></div>'+
         '<div class="celebration-stat"><span class="celebration-stat-value">'+summary.avgPercent+'%</span><span class="celebration-stat-label">평균 유사도</span></div>'+
         '<div class="celebration-stat"><span class="celebration-stat-value">'+el+'</span><span class="celebration-stat-label">소요 시간</span></div>'+
-        (summary.hard>0?'<div class="celebration-stat"><span class="celebration-stat-value">'+summary.hard+'</span><span class="celebration-stat-label">어려운 문장</span></div>':'');
+        (summary.hard>0?'<div class="celebration-stat"><span class="celebration-stat-value">'+summary.hard+'</span><span class="celebration-stat-label">중요 표시 문장</span></div>':'');
       elements.celebrationOverlay.hidden=false;
       requestAnimationFrame(function(){elements.celebrationOverlay.classList.add("visible");});
     }
@@ -2860,8 +3774,31 @@
     elements.restartButton.addEventListener("click",startPractice);
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
     elements.readSentenceButton.addEventListener("click",speakCurrentSentence);
+    elements.recordSentenceButton.addEventListener("click",toggleSentenceRecording);
+    elements.playSentenceRecordingButton.addEventListener("click",playSentenceRecording);
+    elements.deleteSentenceRecordingButton.addEventListener("click",deleteSentenceRecording);
     elements.readSpeedSelect.addEventListener("change",handleSpeechRateChange);
     elements.memorizeBtn.addEventListener("click",hideAndWrite);
+    elements.targetSentence.addEventListener("click",function(e){
+      var token = e.target.closest(".sentence-token");
+      if (!token || !state.active) return;
+      var cur = state.currentQueue[state.currentIndex];
+      if (!cur || !cur.text) return;
+      var index = parseInt(token.getAttribute("data-display-index"), 10);
+      if (!Number.isFinite(index)) return;
+      toggleSentenceHighlight(cur.text, index);
+      rerenderCurrentTargetSentence();
+    });
+    elements.historyContent.addEventListener("click",function(e){
+      var hardButton = e.target.closest("[data-history-hard]");
+      if (hardButton) {
+        toggleHistorySentenceHard(parseInt(hardButton.getAttribute("data-history-hard"), 10));
+        return;
+      }
+      var button = e.target.closest("[data-history-play]");
+      if (!button) return;
+      playHistorySentenceRecording(button.getAttribute("data-history-play") || "");
+    });
     elements.historyToggleButton.addEventListener("click",toggleHistoryPanel);
     elements.stageToggleButton.addEventListener("click",toggleStage);
     elements.heatmapList.addEventListener("click",function(e){
@@ -2903,7 +3840,11 @@
     elements.sourceModalApply.addEventListener("click",function(){handleSourceModalSave(true);});
     elements.sourceModalClose.addEventListener("click",function(){hideSourceModal();});
     elements.sourceModal.addEventListener("click",function(e){if(e.target===elements.sourceModal)hideSourceModal();});
-    elements.difficultyRow.addEventListener("click",function(e){var b=e.target.closest(".difficulty-btn");if(!b)return;var cur=state.currentQueue[state.currentIndex];if(cur)setDifficulty(cur.id,b.getAttribute("data-level"));});
+    elements.difficultyRow.addEventListener("click",function(e){
+      var button = e.target.closest("[data-difficulty-toggle]");
+      if (!button) return;
+      toggleCurrentSentenceHard();
+    });
     elements.celebrationRestart.addEventListener("click",function(){hideCelebration();startPractice();});
     elements.celebrationClose.addEventListener("click",hideCelebration);
     elements.userInput.addEventListener("keydown",function(e){
@@ -2945,9 +3886,20 @@
     document.addEventListener("keyup",suppressShortcutKeyup,true);
     window.addEventListener("resize",queueHistoryPanelViewportLimit);
     window.addEventListener("scroll",queueHistoryPanelViewportLimit,{passive:true});
+    window.addEventListener("pagehide",function(){
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
+      stopSpeaking();
+    });
     if (speechState.supported) {
       if (typeof window.speechSynthesis.addEventListener === "function") window.speechSynthesis.addEventListener("voiceschanged", loadSpeechVoices);
       else window.speechSynthesis.onvoiceschanged = loadSpeechVoices;
+    }
+    if (recordingState.supported && recordingState.storageSupported) {
+      openSentenceRecordingDb().catch(function() {
+        recordingState.storageError = "로컬 음성 저장소를 준비하지 못했습니다.";
+        updateSentenceRecordingButtons();
+      });
     }
 
     restoreSourceDraft();
@@ -2961,6 +3913,8 @@
       historyPanelResizeObserver = new ResizeObserver(queueHistoryPanelViewportLimit);
       historyPanelResizeObserver.observe(elements.practiceMain);
     }
+    refreshSentenceActionButtons();
+    updateSentenceRecordingButtons();
     refreshSourceMeta();refreshStats();refreshProgress();
   </script>
 </body>

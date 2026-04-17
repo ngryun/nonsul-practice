@@ -115,7 +115,10 @@
   }
 
   let time = 0;
+  let sakuraAnimationId = null;
   function animate() {
+    sakuraAnimationId = null;
+    if (document.hidden) return;
     time += 0.016;
 
     // Mouse wind — smooth follow
@@ -209,7 +212,23 @@
       );
     }
 
-    requestAnimationFrame(animate);
+    sakuraAnimationId = requestAnimationFrame(animate);
   }
-  animate();
+  function startSakuraAnimation() {
+    if (sakuraAnimationId !== null || document.hidden) return;
+    sakuraAnimationId = requestAnimationFrame(animate);
+  }
+
+  function stopSakuraAnimation() {
+    if (sakuraAnimationId === null) return;
+    cancelAnimationFrame(sakuraAnimationId);
+    sakuraAnimationId = null;
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopSakuraAnimation();
+    else startSakuraAnimation();
+  });
+
+  startSakuraAnimation();
 })();

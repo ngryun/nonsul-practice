@@ -919,7 +919,7 @@
             <textarea id="userInput" placeholder="현재 문장을 그대로 입력하세요." disabled></textarea>
             <div class="button-row input-action-row">
               <button id="checkButton" class="button-primary" disabled>채점</button>
-              <button id="retryButton" class="button-secondary" disabled>다시 <span class="shortcut-hint">&uarr;</span></button>
+              <button id="retryButton" class="button-secondary" disabled>다시 <span class="shortcut-hint">R</span></button>
               <button id="nextButton" class="button-secondary" disabled>다음</button>
               <button id="hintButton" class="button-secondary" disabled>힌트 <span class="shortcut-hint">Ctrl+/</span></button>
             </div>
@@ -2712,7 +2712,7 @@
       return (e.ctrlKey||e.metaKey)&&!e.altKey&&(e.code==="Slash"||e.key==="/");
     }
     function isPracticeShortcutKey(e){
-      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter";
+      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter"||e.code==="KeyR";
     }
     function isPracticeOverlayOpen(){
       return !elements.sourceModal.hidden||!elements.celebrationOverlay.hidden;
@@ -2745,7 +2745,7 @@
         return;
       }
       consumeShortcutEvent(e);
-      if(state.waitingForNext&&!elements.retryButton.disabled&&e.key==="ArrowUp"){
+      if(state.waitingForNext&&!elements.retryButton.disabled&&(e.key==="ArrowUp"||e.code==="KeyR")){
         retryCurrentSentence();return;
       }
       if(state.waitingForNext&&!elements.nextButton.disabled&&e.key==="ArrowRight"){

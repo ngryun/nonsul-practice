@@ -1186,6 +1186,18 @@
       "때문": true, "통해": true, "대한": true, "위한": true, "관련": true,
       "수": true, "것": true, "등": true, "및": true, "좀": true
     };
+    var KEYWORD_STOPWORD_PATTERNS = [
+      /^수(?:는|도|만|가|를|에)?$/,
+      /^것(?:은|는|도|만|이|가|을|를|에|이다|이고|이며|인데|이었다|였다)?$/,
+      /^때문(?:에|에는)?$/,
+      /^(?:있|없)(?:다|다는|다고|는|는지|으며|으면|어서|어도|었다|었던|을|을까|을지|음|습니다|습니까)?$/,
+      /^(?:이다|이고|이며|이면|인|일|임|입니다|입니까|이었다|였다)$/,
+      /^(?:아니다|아니고|아니며|아니면|아닌|아님|아니었다|아닙니다)$/,
+      /^(?:하다|한다|하고|하며|하면|하는|해|해서|했다|하였다|합니다|합니까|함)$/,
+      /^(?:되다|된다|되고|되며|되면|되는|돼|되어|돼서|됐다|되었다|됩니다|됩니까|됨)$/,
+      /^(?:같다|같고|같은|같으며|같으면|같아|같아서|같았다|같습니다|같음)$/,
+      /^(?:그렇다|그렇고|그러한|그렇게|이렇다|이렇고|이러한|이렇게|저렇다|저렇고|저러한|저렇게)$/
+    ];
     var sourceModalCopyResetId = null;
     var sourceModalHideTimerId = null;
 
@@ -1248,6 +1260,9 @@
     function isKeywordCandidate(token) {
       if (!token) return false;
       if (KEYWORD_STOPWORDS[token]) return false;
+      for (var i = 0; i < KEYWORD_STOPWORD_PATTERNS.length; i++) {
+        if (KEYWORD_STOPWORD_PATTERNS[i].test(token)) return false;
+      }
       if (/^\d+$/.test(token)) return false;
       if (token.length < 2) return false;
       return true;
@@ -1598,13 +1613,39 @@
     function updateStageToggleButton() {
       var btn = elements.stageToggleButton;
       if (!btn) return;
-      if (!state.active || state.waitingForNext) { btn.disabled = true; return; }
-      btn.disabled = false;
       if (state.currentStage === "cloze") {
         btn.textContent = "💪 전체로"; btn.classList.add("is-cloze");
       } else {
         btn.textContent = "🧩 빈칸 먼저"; btn.classList.remove("is-cloze");
       }
+      btn.disabled = !state.active || (state.waitingForNext && state.currentStage !== "cloze");
+    }
+    function resetCurrentSentenceForFullStage(message) {
+      clearClozeMarks();
+      clearSentenceDiff();
+      hideComparison();
+      hideHint();
+      hideDifficultyRow();
+      state.hintLevel = 0;
+      state.clozePassedForCurrent = false;
+      state.currentStage = "full";
+      state.clozeData = null;
+      state.waitingForNext = false;
+      state.gradedAt = 0;
+      elements.nextButton.disabled = true;
+      elements.retryButton.disabled = true;
+      elements.sentenceCard.classList.remove("memorize", "cloze-active", "cloze-locked");
+      document.body.classList.remove("cloze-mode");
+      elements.sentenceActionRow.hidden = false;
+      elements.memorizeMsg.textContent = message || "같은 문장을 전체로 써 볼 차례입니다. 읽은 뒤 가리고 쓰세요.";
+      elements.userInput.value = "";
+      elements.userInput.placeholder = "현재 문장을 그대로 입력하세요.";
+      elements.userInput.disabled = true;
+      elements.checkButton.disabled = true;
+      elements.hintButton.disabled = true;
+      updateStageBadge();
+      refreshSentenceActionButtons();
+      elements.memorizeBtn.focus();
     }
     function decideInitialStage(text) {
       var key = getSentenceKey(text);
@@ -1613,10 +1654,11 @@
       return "full";
     }
     function toggleStage() {
-      if (!state.active || state.waitingForNext) return;
+      if (!state.active || (state.waitingForNext && state.currentStage !== "cloze")) return;
       if (state.currentStage === "cloze") {
-        state.currentStage = "full";
-        state.clozeData = null;
+        resetCurrentSentenceForFullStage("같은 문장을 전체 받아쓰기로 바꿨습니다. 읽은 뒤 가리고 써보세요.");
+        setFeedback("전체 받아쓰기로 전환했습니다.", "빈칸 결과와 상관없이 같은 문장을 전체로 이어서 연습할 수 있습니다.", "", "write");
+        return;
       } else {
         var cur = state.currentQueue[state.currentIndex]; if (!cur) return;
         var cd = buildClozeData(cur.text);
@@ -1632,7 +1674,9 @@
       elements.checkButton.disabled = true;
       elements.hintButton.disabled = true;
       elements.sentenceActionRow.hidden = false;
-      elements.memorizeMsg.textContent = "문장을 읽은 뒤 아래 버튼을 눌러 가리고 쓰세요.";
+      elements.memorizeMsg.textContent = (state.currentStage === "cloze")
+        ? "빈칸 모드로 바꿨습니다. 읽은 뒤 가리고 빈칸부터 채워 보세요."
+        : "문장을 읽은 뒤 아래 버튼을 눌러 가리고 쓰세요.";
       updateStageBadge();
       updateStageToggleButton();
     }

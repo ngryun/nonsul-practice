@@ -130,6 +130,10 @@
       margin-bottom: 14px;
     }
     .source-modal-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+    .source-modal-actions {
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .source-modal-copy,
     .source-modal-close {
       width: 34px; height: 34px; padding: 0;
       border: 1px solid var(--line); border-radius: var(--radius-sm);
@@ -137,7 +141,19 @@
       font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
       transition: all var(--transition-fast);
     }
+    .source-modal-copy svg {
+      width: 16px; height: 16px;
+      stroke: currentColor; fill: none; stroke-width: 1.8;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    .source-modal-copy:hover,
     .source-modal-close:hover { background: var(--line); color: var(--text); transform: none; box-shadow: none; }
+    .source-modal-copy.is-copied {
+      background: var(--accent-light); color: var(--accent); border-color: var(--accent);
+    }
+    .source-modal-copy.is-error {
+      background: var(--bad-light); color: var(--bad); border-color: var(--bad-border);
+    }
     .source-modal-text {
       white-space: pre-wrap; line-height: 1.8; font-size: 0.95rem;
       padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-md);
@@ -149,12 +165,11 @@
 
     /* "모범 답안 보기" trigger */
     .source-trigger {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; border: 1px solid var(--line); border-radius: 20px;
-      background: var(--panel); color: var(--muted); cursor: pointer;
-      font: inherit; font-size: 0.85rem; font-weight: 500;
-      box-shadow: var(--shadow-sm); margin-bottom: 14px;
-      transition: all var(--transition-fast);
+      width: 38px; height: 38px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--line); border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.78); color: var(--muted); cursor: pointer;
+      font: inherit; transition: all var(--transition-fast);
     }
     .source-trigger:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); transform: none; }
     .source-trigger[hidden] { display: none; }
@@ -166,7 +181,7 @@
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(2px);
       box-shadow: var(--shadow-sm);
-      padding: 24px;
+      padding: 20px;
     }
 
     /* Shared controls */
@@ -179,7 +194,7 @@
     textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
     textarea::placeholder { color: var(--muted); opacity: 0.5; }
     #sourceText { min-height: 180px; padding: 14px 16px; }
-    #userInput { min-height: 120px; padding: 14px 16px; font-size: 1rem; background: #fff; }
+    #userInput { min-height: 92px; padding: 12px 14px; font-size: 0.98rem; background: #fff; }
     .inline-note { margin-top: 8px; color: var(--muted); font-size: 0.83rem; }
     .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     button {
@@ -224,22 +239,40 @@
     .meta-item span { color: var(--muted); font-size: 0.9rem; }
     .meta-item strong { font-size: 1rem; font-weight: 700; }
 
-    .practice-status { padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
-    .status-line { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
-    .status-line span {
-      padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
-      background: var(--soft); font-size: 0.88rem; text-align: center;
-    }
-    .status-line strong { font-weight: 700; }
-    .timer { font-variant-numeric: tabular-nums; }
-
-    .progress-card,.sentence-card,.input-card,.feedback-card,.compare-card,.hint-card {
-      margin-bottom: 14px; border: 1px solid var(--line); border-radius: var(--radius-md);
-      background: rgba(255,255,255,0.9); box-shadow: var(--shadow-sm); padding: 20px;
+    .practice-strip,
+    .sentence-card,.input-card,.feedback-card,.compare-card,.hint-card {
+      margin-bottom: 12px; border: 1px solid var(--line); border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.9); box-shadow: var(--shadow-sm); padding: 16px;
       transition: all var(--transition-normal);
     }
-    .progress-header { display: flex; justify-content: space-between; gap: 10px; font-size: 0.88rem; font-weight: 600; }
-    .progress-track { height: 10px; margin-top: 12px; background: var(--soft); border-radius: 100px; overflow: hidden; }
+    .practice-strip {
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.84);
+    }
+    .practice-strip-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 10px;
+    }
+    .practice-strip-stats {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      min-width: 0;
+    }
+    .practice-stat {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px;
+      background: var(--soft); font-size: 0.82rem; color: var(--muted); white-space: nowrap;
+    }
+    .practice-stat strong { color: var(--text); font-size: 0.9rem; font-weight: 700; }
+    .practice-strip-actions {
+      display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .strip-icon-button {
+      width: 38px; height: 38px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm);
+      font-size: 1rem; line-height: 1;
+    }
+    .progress-track { height: 6px; margin-top: 0; background: var(--soft); border-radius: 100px; overflow: hidden; }
     .progress-fill {
       width: 0; height: 100%;
       background: linear-gradient(90deg, #f2a0b7, #c084fc);
@@ -247,13 +280,13 @@
       transition: width var(--transition-slow);
     }
     .section-label {
-      display: block; margin-bottom: 10px; color: var(--muted);
+      display: block; margin-bottom: 8px; color: var(--muted);
       font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;
     }
     .target-sentence {
       margin: 0; font-family: 'Noto Serif KR', "AppleMyungjo","Nanum Myeongjo",serif;
-      font-size: 1.35rem; line-height: 1.85;
-      border-left: 3px solid var(--accent); padding-left: 16px;
+      font-size: 1.24rem; line-height: 1.72;
+      border-left: 3px solid var(--accent); padding-left: 12px;
     }
     .target-sentence .diff-mark {
       text-decoration: underline dotted rgba(214, 110, 90, 0.85);
@@ -334,7 +367,7 @@
       border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
     }
     .speech-rate-control select:disabled { cursor: not-allowed; color: var(--muted); }
-    .sentence-card .memorize-msg { display: block; margin-top: 10px; color: var(--muted); font-size: 0.85rem; }
+    .sentence-card .memorize-msg { display: block; margin-top: 8px; color: var(--muted); font-size: 0.82rem; }
     .sentence-card.memorize .memorize-msg { color: var(--accent); font-weight: 600; }
 
     /* Hint card */
@@ -344,20 +377,20 @@
     .hint-card[hidden] { display: none; }
     .hint-text {
       margin: 0; font-family: 'Noto Serif KR', "AppleMyungjo","Nanum Myeongjo",serif;
-      font-size: 1.15rem; line-height: 1.8; letter-spacing: 0.03em; word-break: break-all;
+      font-size: 1.02rem; line-height: 1.65; letter-spacing: 0.02em; word-break: break-all;
     }
-    .hint-level { display: inline-block; margin-top: 8px; font-size: 0.82rem; color: var(--muted); }
+    .hint-level { display: inline-block; margin-top: 6px; font-size: 0.78rem; color: var(--muted); }
 
     /* Feedback card */
-    .feedback-card { min-height: 90px; display: flex; align-items: flex-start; gap: 14px; border-color: var(--line); }
+    .feedback-card { display: flex; align-items: flex-start; gap: 10px; border-color: var(--line); }
     .feedback-icon {
-      flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+      flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(250,245,240,0.95));
       color: var(--muted); border: 1px solid rgba(212,132,154,0.12);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
     }
-    .feedback-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
+    .feedback-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
     .feedback-body { flex: 1; min-width: 0; }
     .feedback-card.good { background: var(--good-light); border-color: var(--good-border); }
     .feedback-card.good .feedback-icon { background: var(--good-border); color: var(--good); }
@@ -365,27 +398,20 @@
     .feedback-card.bad .feedback-icon { background: var(--bad-border); color: var(--bad); }
     .feedback-card.retry { background: var(--retry-light); border-color: var(--retry-border); }
     .feedback-card.retry .feedback-icon { background: var(--retry-border); color: var(--accent); }
-    .feedback-title { margin: 0 0 4px; font-size: 1rem; font-weight: 700; }
-    .feedback-text { margin: 0; color: var(--muted); line-height: 1.6; font-size: 0.93rem; }
+    .feedback-title { margin: 0 0 3px; font-size: 0.94rem; font-weight: 700; }
+    .feedback-text { margin: 0; color: var(--muted); line-height: 1.45; font-size: 0.85rem; }
 
     .compare-card[hidden] { display: none; }
     .compare-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
-    .compare-box { padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--soft); }
-    .compare-box h3 { margin: 0 0 10px; font-size: 0.9rem; font-weight: 700; }
-    .diff-line { min-height: 64px; line-height: 1.8; word-break: break-word; font-size: 0.96rem; }
+    .compare-box { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--soft); }
+    .compare-box h3 { margin: 0 0 8px; font-size: 0.82rem; font-weight: 700; }
+    .diff-line { min-height: 52px; line-height: 1.65; word-break: break-word; font-size: 0.9rem; }
     .diff-char { display: inline-block; min-width: 0.7ch; padding: 0 1px; border-radius: 3px; }
     .diff-char.wrong { background: var(--bad-border); color: var(--bad); font-weight: 700; }
     .diff-char.gap { background: rgba(212,132,154,0.08); color: var(--muted); font-weight: 600; }
-    .compare-note { margin-top: 10px; color: var(--muted); font-size: 0.82rem; }
-
-    .summary-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin-top: 16px; }
-    .summary-item {
-      background: var(--soft); border: 1px solid var(--line); border-radius: var(--radius-sm);
-      padding: 12px 14px; text-align: center;
-    }
-    .summary-item span { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
-    .summary-item strong { font-size: 1.1rem; font-weight: 700; }
+    .compare-note { margin-top: 8px; color: var(--muted); font-size: 0.78rem; }
     .footer-note { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+    .footer-note[hidden] { display: none; }
     .shortcut-hint {
       display: inline-block; padding: 2px 7px; border: 1px solid var(--line); border-radius: 5px;
       background: var(--soft); font-size: 0.75rem; font-family: 'Inter', monospace;
@@ -394,11 +420,11 @@
     button .shortcut-hint { margin-left: 6px; }
 
     /* Difficulty buttons */
-    .difficulty-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .difficulty-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
     .difficulty-row[hidden] { display: none; }
-    .difficulty-label { font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-right: 4px; }
+    .difficulty-label { font-size: 0.76rem; font-weight: 600; color: var(--muted); margin-right: 2px; }
     .difficulty-btn {
-      padding: 4px 14px; font-size: 0.8rem; font-weight: 600;
+      padding: 4px 12px; font-size: 0.78rem; font-weight: 600;
       border: 1.5px solid var(--line); border-radius: 100px; background: #fff;
       cursor: pointer; transition: all var(--transition-fast);
     }
@@ -468,7 +494,7 @@
     /* Stage badge and cloze */
     .sentence-card-head {
       display: flex; align-items: center; justify-content: space-between;
-      gap: 10px; margin-bottom: 10px;
+      gap: 10px; margin-bottom: 8px;
     }
     .sentence-card-head .section-label { margin-bottom: 0; }
     .stage-badge {
@@ -485,11 +511,11 @@
     }
     .cloze-display {
       display: none;
-      margin: 0; padding: 14px 16px;
+      margin: 0; padding: 12px 14px;
       border-left: 3px solid #f59e0b;
       background: rgba(254,243,199,0.3);
       font-family: 'Noto Serif KR', "AppleMyungjo","Nanum Myeongjo",serif;
-      font-size: 1.2rem; line-height: 1.95;
+      font-size: 1.1rem; line-height: 1.8;
       word-break: keep-all;
     }
     .sentence-card.cloze-active .target-sentence { display: none; }
@@ -526,10 +552,24 @@
     body.cloze-mode .input-card > label,
     body.cloze-mode .input-card > textarea { display: none; }
     body.cloze-mode .input-card::before {
-      content: "🧩 위 빈칸에 직접 입력한 뒤 채점하세요 (Enter로 이동, Ctrl+Enter로 채점)";
-      display: block; padding: 10px 14px; margin-bottom: 10px;
+      content: "🧩 빈칸을 채운 뒤 채점하세요.";
+      display: block; padding: 8px 12px; margin-bottom: 8px;
       background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
-      border-radius: var(--radius-sm); font-size: 0.88rem; font-weight: 600;
+      border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 600;
+    }
+    .input-card label {
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+    }
+    .input-action-row {
+      margin-top: 10px;
+      gap: 6px;
+    }
+    .input-action-row button {
+      min-height: 38px;
+      padding: 8px 13px;
+      font-size: 0.82rem;
+      border-radius: 999px;
     }
 
     /* Animations */
@@ -573,19 +613,25 @@
       .target-sentence { font-size: 1.15rem; }
       .button-row { flex-direction: column; }
       .button-row button { width: 100%; min-height: 44px; }
+      .practice-strip-top { align-items: flex-start; }
+      .practice-strip-stats { width: 100%; }
+      .practice-stat { flex: 1 1 calc(50% - 4px); justify-content: space-between; }
+      .practice-strip-actions { margin-left: auto; }
+      .source-trigger,
+      .strip-icon-button { width: 38px; min-width: 38px; height: 38px; }
       .sentence-action-row { flex-direction: row; align-items: stretch; }
       .sentence-action-row button { width: auto; min-height: 40px; }
       .sentence-action-row .icon-button { width: 40px; min-width: 40px; }
       .sentence-action-row .compact-button,
       .sentence-action-row .memorize-btn,
       .sentence-action-row .speech-rate-control { flex: 1 1 auto; }
+      .input-action-row { flex-direction: row; }
+      .input-action-row button { width: auto; min-height: 38px; flex: 1 1 calc(50% - 3px); }
       .speech-rate-control { width: 100%; justify-content: space-between; }
       .speech-rate-control select { flex: 1; min-height: 44px; text-align: right; }
       .sentence-action-row .speech-rate-control { width: auto; justify-content: center; }
       .sentence-action-row .speech-rate-control select { min-height: 40px; text-align: left; }
       .compare-grid { grid-template-columns: 1fr; }
-      .summary-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
-      .status-line { grid-template-columns: 1fr; }
       .celebration-content { padding: 32px 24px; width: 95%; }
       .source-modal-body { padding: 20px; }
     }
@@ -640,25 +686,21 @@
       </div>
     </details>
 
-    <!-- 연습 중: "모범 답안 보기" 버튼 -->
-    <button id="sourceTrigger" class="source-trigger" hidden>
-      <span class="source-trigger-icon">&#128196;</span> 모범 답안 보기
-    </button>
-
     <!-- 연습 영역 -->
     <section class="practice-section">
-      <div class="practice-status">
-        <div class="status-line">
-          <span>라운드 <strong id="roundNumber">-</strong></span>
-          <span>완료 <strong id="masteredCount">0 / 0</strong></span>
-          <span>경과 <strong id="timerDisplay" class="timer">00:00</strong></span>
-        </div>
-      </div>
-
-      <div class="progress-card">
-        <div class="progress-header">
-          <span id="progressLabel">준비가 끝나면 연습을 시작하세요.</span>
-          <span id="progressSubLabel">현재 라운드 0 / 0</span>
+      <div class="practice-strip">
+        <div class="practice-strip-top">
+          <div class="practice-strip-stats">
+            <span class="practice-stat">문장 <strong id="progressPosition">0 / 0</strong></span>
+            <span class="practice-stat">완료 <strong id="progressDone">0 / 0</strong></span>
+          </div>
+          <div class="practice-strip-actions">
+            <button id="sourceTrigger" class="source-trigger" type="button" hidden aria-label="모범 답안 보기" title="모범 답안 보기">
+              <span class="source-trigger-icon">&#128196;</span>
+              <span class="sr-only">모범 답안 보기</span>
+            </button>
+            <button id="restartButton" class="button-secondary strip-icon-button" type="button" disabled aria-label="처음부터 다시" title="처음부터 다시">&#8634;</button>
+          </div>
         </div>
         <div class="progress-track">
           <div id="progressFill" class="progress-fill"></div>
@@ -704,13 +746,13 @@
       </div>
 
       <div class="input-card">
-        <label for="userInput">그대로 입력하기 <span class="shortcut-hint">Ctrl+Enter</span> 채점</label>
+        <label for="userInput">입력 후 채점 <span class="shortcut-hint">Enter</span></label>
         <textarea id="userInput" placeholder="현재 문장을 그대로 입력하세요." disabled></textarea>
-        <div class="button-row">
-          <button id="checkButton" class="button-primary" disabled>채점하기</button>
-          <button id="retryButton" class="button-retry" disabled>다시 쓰기 <span class="shortcut-hint">&uarr;</span></button>
-          <button id="nextButton" class="button-next" disabled>다음 문장 &rarr;</button>
-          <button id="hintButton" class="button-secondary" disabled>힌트 보기 <span class="shortcut-hint">Ctrl+/</span></button>
+        <div class="button-row input-action-row">
+          <button id="checkButton" class="button-primary" disabled>채점</button>
+          <button id="retryButton" class="button-secondary" disabled>다시 <span class="shortcut-hint">&uarr;</span></button>
+          <button id="nextButton" class="button-secondary" disabled>다음</button>
+          <button id="hintButton" class="button-secondary" disabled>힌트 <span class="shortcut-hint">Ctrl+/</span></button>
         </div>
       </div>
 
@@ -739,19 +781,7 @@
         <p class="compare-note">빠진 글자는 <strong>∅</strong>로 표시됩니다.</p>
       </div>
 
-      <div class="summary-strip">
-        <div class="summary-item"><span>전체 문장</span><strong id="totalCount">0</strong></div>
-        <div class="summary-item"><span>정답 횟수</span><strong id="correctCount">0</strong></div>
-        <div class="summary-item"><span>오답 횟수</span><strong id="wrongCount">0</strong></div>
-        <div class="summary-item"><span>총 시도 수</span><strong id="attemptCount">0</strong></div>
-        <div class="summary-item"><span>쉬움</span><strong id="easyCount">0</strong></div>
-        <div class="summary-item"><span>보통</span><strong id="normalCount">0</strong></div>
-        <div class="summary-item"><span>어려움</span><strong id="hardCount">0</strong></div>
-        <div class="summary-item"><span>평균 유사도</span><strong id="avgSimilarity">-</strong></div>
-      </div>
-
-      <div class="footer-note">
-        <button id="restartButton" class="button-secondary" disabled style="margin-right:8px">처음부터 다시</button>
+      <div id="footerNote" class="footer-note">
         이 파일 하나만 열면 바로 연습할 수 있습니다.
       </div>
     </section>
@@ -762,7 +792,15 @@
     <div class="source-modal-body">
       <div class="source-modal-header">
         <h2>모범 답안</h2>
-        <button id="sourceModalClose" class="source-modal-close" type="button">&times;</button>
+        <div class="source-modal-actions">
+          <button id="sourceModalCopy" class="source-modal-copy" type="button" aria-label="모범 답안 복사" title="모범 답안 복사">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="9" y="9" width="10" height="10" rx="2"></rect>
+              <path d="M6 15V7a2 2 0 0 1 2-2h8"></path>
+            </svg>
+          </button>
+          <button id="sourceModalClose" class="source-modal-close" type="button">&times;</button>
+        </div>
       </div>
       <div id="sourceModalText" class="source-modal-text"></div>
       <div class="source-modal-meta">
@@ -969,14 +1007,12 @@
     var elements = {
       sourceText: $("sourceText"), sourceSection: $("sourceSection"),
       sourceTrigger: $("sourceTrigger"),
-      sourceModal: $("sourceModal"), sourceModalClose: $("sourceModalClose"),
+      sourceModal: $("sourceModal"), sourceModalCopy: $("sourceModalCopy"), sourceModalClose: $("sourceModalClose"),
       sourceModalText: $("sourceModalText"), sourceModalCount: $("sourceModalCount"),
       sourceModalRetry: $("sourceModalRetry"),
       startButton: $("startButton"), restartButton: $("restartButton"),
       sentenceCount: $("sentenceCount"),
-      roundNumber: $("roundNumber"), masteredCount: $("masteredCount"),
-      timerDisplay: $("timerDisplay"),
-      progressLabel: $("progressLabel"), progressSubLabel: $("progressSubLabel"),
+      progressPosition: $("progressPosition"), progressDone: $("progressDone"),
       progressFill: $("progressFill"),
       sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
       clozeDisplay: $("clozeDisplay"), stageBadge: $("stageBadge"),
@@ -984,6 +1020,7 @@
       heatmapPanel: $("heatmapPanel"), heatmapBadge: $("heatmapBadge"),
       heatmapList: $("heatmapList"), heatmapPreview: $("heatmapPreview"),
       heatmapClearBtn: $("heatmapClearBtn"),
+      footerNote: $("footerNote"),
       sentenceActionRow: $("sentenceActionRow"),
       prevSentenceButton: $("prevSentenceButton"),
       readSentenceButton: $("readSentenceButton"),
@@ -997,10 +1034,6 @@
       feedbackTitle: $("feedbackTitle"), feedbackText: $("feedbackText"),
       difficultyRow: $("difficultyRow"),
       compareCard: $("compareCard"), expectedDiff: $("expectedDiff"), actualDiff: $("actualDiff"),
-      totalCount: $("totalCount"), correctCount: $("correctCount"),
-      wrongCount: $("wrongCount"), attemptCount: $("attemptCount"),
-      easyCount: $("easyCount"), normalCount: $("normalCount"),
-      hardCount: $("hardCount"), avgSimilarity: $("avgSimilarity"),
       celebrationOverlay: $("celebrationOverlay"), celebrationStats: $("celebrationStats"),
       celebrationRestart: $("celebrationRestart"), celebrationClose: $("celebrationClose")
     };
@@ -1024,7 +1057,9 @@
     };
     var ICONS = {
       speaker: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18 6a8.5 8.5 0 0 1 0 12"></path></svg>',
-      stop: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect></svg>'
+      stop: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect></svg>',
+      copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="10" height="10" rx="2"></rect><path d="M6 15V7a2 2 0 0 1 2-2h8"></path></svg>',
+      check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7.5 10 17.5l-4.5-4.5"></path></svg>'
     };
     var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
     var PASS_THRESHOLD = 80;
@@ -1033,6 +1068,7 @@
     var HEATMAP_KEY = "nonsul-practice/error-heatmap";
     var CLOZE_BLANK_RATIO = 0.4;
     var CLOZE_AUTO_FAIL_THRESHOLD = 2;
+    var sourceModalCopyResetId = null;
 
     function hashText(s) {
       var h = 5381;
@@ -1403,6 +1439,7 @@
       var n = splitIntoSentences(elements.sourceText.value).length;
       elements.sentenceCount.textContent = n + "문장";
       elements.startButton.disabled = n === 0;
+      if (!state.active) elements.restartButton.disabled = n === 0;
     }
     function saveSourceDraft() {
       try {
@@ -1444,18 +1481,23 @@
       saveSpeechRate();
       if (speechState.supported && (speechState.speaking || window.speechSynthesis.speaking)) speakCurrentSentence(true);
     }
-    function refreshStats() {
-      elements.totalCount.textContent = String(state.sourceSentences.length);
-      elements.correctCount.textContent = String(state.correctAttempts);
-      elements.wrongCount.textContent = String(state.wrongAttempts);
-      elements.attemptCount.textContent = String(state.totalAttempts);
-      elements.roundNumber.textContent = state.sourceSentences.length ? String(state.round) : "-";
-      elements.masteredCount.textContent = state.solvedIds.size + " / " + state.sourceSentences.length;
+    function getSessionSummary() {
       var easy=0,normal=0,hard=0;
       for(var k in state.difficultyMap){var v=state.difficultyMap[k];if(v==="easy")easy++;else if(v==="normal")normal++;else if(v==="hard")hard++;}
-      elements.easyCount.textContent=String(easy);elements.normalCount.textContent=String(normal);elements.hardCount.textContent=String(hard);
-      if(state.similarityLog.length>0){var avg=Math.round(state.similarityLog.reduce(function(a,b){return a+b},0)/state.similarityLog.length);elements.avgSimilarity.textContent=avg+"%";}
-      else{elements.avgSimilarity.textContent="-";}
+      var avg = state.similarityLog.length>0 ? Math.round(state.similarityLog.reduce(function(a,b){return a+b},0)/state.similarityLog.length) : 0;
+      return {
+        total: state.sourceSentences.length,
+        correct: state.correctAttempts,
+        wrong: state.wrongAttempts,
+        attempts: state.totalAttempts,
+        easy: easy,
+        normal: normal,
+        hard: hard,
+        avgPercent: avg
+      };
+    }
+    function refreshStats() {
+      return getSessionSummary();
     }
     function loadSpeechVoices() {
       if (!speechState.supported) return;
@@ -1533,12 +1575,19 @@
       window.speechSynthesis.speak(utterance);
     }
     function refreshProgress() {
-      var rl=state.currentQueue.length,cs=rl?Math.min(state.currentIndex+1,rl):0;
-      elements.progressFill.style.width=(rl?(state.currentIndex/rl)*100:0)+"%";
-      if(!state.active){elements.progressLabel.textContent="준비가 끝나면 연습을 시작하세요.";elements.progressSubLabel.textContent="현재 라운드 0 / 0";return;}
-      if(!rl){elements.progressLabel.textContent="연습이 마무리되었습니다.";elements.progressSubLabel.textContent="현재 라운드 0 / 0";return;}
-      elements.progressLabel.textContent="현재 문장에 집중해서 그대로 입력해보세요.";
-      elements.progressSubLabel.textContent="현재 라운드 "+cs+" / "+rl;
+      var total = state.sourceSentences.length;
+      var queueLength = state.currentQueue.length;
+      var completed = total ? Math.min(state.solvedIds.size, total) : 0;
+      var current = queueLength ? Math.min(state.currentIndex + 1, queueLength) : 0;
+      if (!state.active) {
+        elements.progressPosition.textContent = total ? total + " / " + total : "0 / 0";
+        elements.progressDone.textContent = total ? completed + " / " + total : "0 / 0";
+        elements.progressFill.style.width = (total ? (completed / total) * 100 : 0) + "%";
+        return;
+      }
+      elements.progressPosition.textContent = current + " / " + queueLength;
+      elements.progressDone.textContent = completed + " / " + total;
+      elements.progressFill.style.width = (total ? (completed / total) * 100 : 0) + "%";
     }
     function getFeedbackIcon(name){
       var icons = {
@@ -1560,7 +1609,11 @@
       elements.feedbackIcon.innerHTML=getFeedbackIcon(icon || (tone==="good"?"success":tone==="bad"?"warning":tone==="retry"?"retry":"note"));
     }
     function stopTimer(){if(state.timerId){clearInterval(state.timerId);state.timerId=null;}}
-    function startTimer(){stopTimer();elements.timerDisplay.textContent="00:00";state.timerId=setInterval(function(){if(state.startedAt)elements.timerDisplay.textContent=formatElapsed(Date.now()-state.startedAt);},250);}
+    function startTimer(){stopTimer();}
+    function setPracticeAuxVisibility(isPracticeActive){
+      elements.heatmapPanel.hidden = !!isPracticeActive;
+      elements.footerNote.hidden = !!isPracticeActive;
+    }
 
     function showComparison(expected,actual) {
       elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();
@@ -1624,7 +1677,54 @@
     function getFirstMismatch(a,b){var ac=Array.from(a),bc=Array.from(b);for(var i=0;i<Math.max(ac.length,bc.length);i++){if((ac[i]||"")!==(bc[i]||""))return i;}return -1;}
 
     // Source modal
+    function setSourceModalCopyState(stateName, title) {
+      if (!elements.sourceModalCopy) return;
+      elements.sourceModalCopy.classList.remove("is-copied", "is-error");
+      if (stateName) elements.sourceModalCopy.classList.add(stateName);
+      elements.sourceModalCopy.title = title;
+      elements.sourceModalCopy.setAttribute("aria-label", title);
+      elements.sourceModalCopy.innerHTML = stateName === "is-copied" ? ICONS.check : ICONS.copy;
+    }
+    function resetSourceModalCopyState() {
+      if (sourceModalCopyResetId) {
+        clearTimeout(sourceModalCopyResetId);
+        sourceModalCopyResetId = null;
+      }
+      setSourceModalCopyState("", "모범 답안 복사");
+    }
+    function fallbackCopyText(text) {
+      var textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "readonly");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      textarea.style.pointerEvents = "none";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(textarea);
+      return ok;
+    }
+    function copySourceModalText() {
+      var text = elements.sourceText.value || elements.sourceModalText.textContent || "";
+      if (!text.trim()) return;
+      var copyTask = (navigator.clipboard && window.isSecureContext)
+        ? navigator.clipboard.writeText(text)
+        : (fallbackCopyText(text) ? Promise.resolve() : Promise.reject(new Error("copy failed")));
+      copyTask.then(function(){
+        resetSourceModalCopyState();
+        setSourceModalCopyState("is-copied", "복사 완료");
+        sourceModalCopyResetId = setTimeout(resetSourceModalCopyState, 1400);
+      }).catch(function(){
+        resetSourceModalCopyState();
+        setSourceModalCopyState("is-error", "복사 실패");
+        sourceModalCopyResetId = setTimeout(resetSourceModalCopyState, 1400);
+      });
+    }
     function showSourceModal() {
+      resetSourceModalCopyState();
       elements.sourceModalText.textContent = elements.sourceText.value;
       elements.sourceModalCount.textContent = String(state.sourceSentences.length);
       elements.sourceModalRetry.textContent = String(state.retryQueue.length);
@@ -1632,6 +1732,7 @@
       requestAnimationFrame(function(){elements.sourceModal.classList.add("visible");});
     }
     function hideSourceModal() {
+      resetSourceModalCopyState();
       elements.sourceModal.classList.remove("visible");
       setTimeout(function(){elements.sourceModal.hidden=true;},300);
     }
@@ -1785,15 +1886,13 @@
       elements.userInput.disabled=true;elements.checkButton.disabled=true;
       elements.nextButton.disabled=true;elements.retryButton.disabled=true;elements.hintButton.disabled=true;
       hideDifficultyRow();elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";
-      elements.progressFill.style.width="100%";
-      elements.progressLabel.textContent="연습이 끝났습니다.";
-      elements.progressSubLabel.textContent="전체 문장을 모두 통과했습니다.";
       elements.targetSentence.textContent="모든 문장을 끝냈습니다.";
       elements.sentenceCard.classList.remove("memorize");
       setFeedback("완료했습니다.","틀린 문장까지 모두 통과했습니다.","good","success");
-      hideComparison();hideHint();refreshStats();
+      hideComparison();hideHint();refreshStats();refreshProgress();
       elements.stageBadge.hidden=true;
       renderHeatmapPanel();
+      setPracticeAuxVisibility(false);
       elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;
       showCelebration();
     }
@@ -1807,9 +1906,10 @@
       state.currentIndex=0;state.round=1;state.totalAttempts=0;state.correctAttempts=0;state.wrongAttempts=0;
       state.solvedIds=new Set();state.startedAt=Date.now();state.active=true;
       state.waitingForNext=false;state.hintLevel=0;state.difficultyMap={};state.similarityLog=[];
-      elements.restartButton.disabled=false;elements.timerDisplay.textContent="00:00";
+      elements.restartButton.disabled=false;
       startTimer();hideComparison();hideHint();
       setFeedback("연습을 시작합니다.","한 문장씩 읽고 기억한 뒤 써보세요.","","start");
+      setPracticeAuxVisibility(true);
       elements.sourceSection.hidden=true;elements.sourceTrigger.hidden=false;
       renderCurrentSentence();
     }
@@ -1990,14 +2090,13 @@
     }
 
     function showCelebration(){
+      var summary = getSessionSummary();
       var el=state.startedAt?formatElapsed(Date.now()-state.startedAt):"00:00";
-      var avg=state.similarityLog.length>0?Math.round(state.similarityLog.reduce(function(a,b){return a+b},0)/state.similarityLog.length):0;
-      var hc=0;for(var k in state.difficultyMap)if(state.difficultyMap[k]==="hard")hc++;
       elements.celebrationStats.innerHTML=
-        '<div class="celebration-stat"><span class="celebration-stat-value">'+state.sourceSentences.length+'</span><span class="celebration-stat-label">총 문장</span></div>'+
-        '<div class="celebration-stat"><span class="celebration-stat-value">'+avg+'%</span><span class="celebration-stat-label">평균 유사도</span></div>'+
+        '<div class="celebration-stat"><span class="celebration-stat-value">'+summary.total+'</span><span class="celebration-stat-label">총 문장</span></div>'+
+        '<div class="celebration-stat"><span class="celebration-stat-value">'+summary.avgPercent+'%</span><span class="celebration-stat-label">평균 유사도</span></div>'+
         '<div class="celebration-stat"><span class="celebration-stat-value">'+el+'</span><span class="celebration-stat-label">소요 시간</span></div>'+
-        (hc>0?'<div class="celebration-stat"><span class="celebration-stat-value">'+hc+'</span><span class="celebration-stat-label">어려운 문장</span></div>':'');
+        (summary.hard>0?'<div class="celebration-stat"><span class="celebration-stat-value">'+summary.hard+'</span><span class="celebration-stat-label">어려운 문장</span></div>':'');
       elements.celebrationOverlay.hidden=false;
       requestAnimationFrame(function(){elements.celebrationOverlay.classList.add("visible");});
     }
@@ -2006,7 +2105,7 @@
     // Events
     elements.sourceText.addEventListener("input",function(){saveSourceDraft();refreshSourceMeta();});
     elements.startButton.addEventListener("click",startPractice);
-    elements.restartButton.addEventListener("click",function(){elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;startPractice();});
+    elements.restartButton.addEventListener("click",startPractice);
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
     elements.readSentenceButton.addEventListener("click",speakCurrentSentence);
     elements.readSpeedSelect.addEventListener("change",handleSpeechRateChange);
@@ -2029,14 +2128,18 @@
     elements.nextButton.addEventListener("click",moveToNextSentence);
     elements.hintButton.addEventListener("click",showHint);
     elements.sourceTrigger.addEventListener("click",showSourceModal);
+    elements.sourceModalCopy.addEventListener("click",copySourceModalText);
     elements.sourceModalClose.addEventListener("click",hideSourceModal);
     elements.sourceModal.addEventListener("click",function(e){if(e.target===elements.sourceModal)hideSourceModal();});
     elements.difficultyRow.addEventListener("click",function(e){var b=e.target.closest(".difficulty-btn");if(!b)return;var cur=state.currentQueue[state.currentIndex];if(cur)setDifficulty(cur.id,b.getAttribute("data-level"));});
     elements.celebrationRestart.addEventListener("click",function(){hideCelebration();startPractice();});
     elements.celebrationClose.addEventListener("click",hideCelebration);
     elements.userInput.addEventListener("keydown",function(e){
-      if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();if(!state.waitingForNext)submitAnswer();else moveToNextSentence();return;}
-      if(e.key==="Enter"&&!e.shiftKey&&state.waitingForNext){e.preventDefault();moveToNextSentence();}
+      if(e.isComposing||e.keyCode===229)return;
+      if(e.key!=="Enter"||e.shiftKey||e.altKey||e.ctrlKey||e.metaKey)return;
+      e.preventDefault();
+      if(state.waitingForNext)moveToNextSentence();
+      else submitAnswer();
     });
     elements.clozeDisplay.addEventListener("keydown",function(e){
       var t=e.target;if(!t||!t.classList||!t.classList.contains("cloze-input"))return;
@@ -2067,6 +2170,7 @@
     restoreSpeechRate();
     loadSpeechVoices();
     renderHeatmapPanel();
+    setPracticeAuxVisibility(false);
     refreshSourceMeta();refreshStats();refreshProgress();
   </script>
 </body>

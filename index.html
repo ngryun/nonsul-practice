@@ -1231,7 +1231,7 @@
       enterAdvanceLocked: false,
       active: false, waitingForNext: false, hintLevel: 0,
       difficultyMap: {}, similarityLog: [],
-      currentStage: "full", clozeData: null, clozePassedForCurrent: false,
+      currentStage: "full", clozeData: null, currentClozeMode: null, clozePassedForCurrent: false,
       keywordStats: null,
       gradedAt: 0
     };
@@ -1257,7 +1257,10 @@
     var READ_SPEED_KEY = "nonsul-practice/read-speed";
     var DEFAULT_SPEECH_RATE = 0.95;
     var HEATMAP_KEY = "nonsul-practice/error-heatmap";
-    var CLOZE_BLANK_RATIO = 0.4;
+    var CLOZE_ASSIST_BLANK_RATIO = 0.25;
+    var CLOZE_ASSIST_MAX_BLANKS = 3;
+    var CLOZE_REVIEW_BLANK_RATIO = 0.35;
+    var CLOZE_REVIEW_MAX_BLANKS = 4;
     var CLOZE_AUTO_FAIL_THRESHOLD = 2;
     var KEYWORD_STOPWORDS = {
       "은": true, "는": true, "이": true, "가": true, "을": true, "를": true,
@@ -1640,7 +1643,13 @@
       if (errorMap[token]) score += errorMap[token] * 3;
       return score;
     }
-    function buildClozeData(text) {
+    function getClozeSettings(mode) {
+      if (mode === "review") {
+        return { ratio: CLOZE_REVIEW_BLANK_RATIO, maxBlanks: CLOZE_REVIEW_MAX_BLANKS };
+      }
+      return { ratio: CLOZE_ASSIST_BLANK_RATIO, maxBlanks: CLOZE_ASSIST_MAX_BLANKS };
+    }
+    function buildClozeData(text, mode) {
       var tokens = tokenize(text);
       if (tokens.length < 2) return null;
       // Keep original (display) tokens — same count as normalized tokens,
@@ -1664,7 +1673,8 @@
         return { idx: idx, score: scoreClozeCandidate(tokens[idx], errorMap) + rng() * 0.01 };
       });
       scored.sort(function (a, b) { return b.score - a.score; });
-      var targetCount = Math.max(1, Math.ceil(eligible.length * CLOZE_BLANK_RATIO));
+      var settings = getClozeSettings(mode);
+      var targetCount = Math.max(1, Math.min(eligible.length, settings.maxBlanks, Math.ceil(eligible.length * settings.ratio)));
       var picked = scored.slice(0, targetCount).map(function (s) { return s.idx; });
       picked.sort(function (a, b) { return a - b; });
       return { tokens: tokens, displayTokens: displayTokens, blanks: picked, weakSet: errorMap };
@@ -1757,6 +1767,7 @@
       state.clozePassedForCurrent = false;
       state.currentStage = "full";
       state.clozeData = null;
+      state.currentClozeMode = null;
       state.waitingForNext = false;
       state.gradedAt = 0;
       elements.nextButton.disabled = true;
@@ -1774,11 +1785,13 @@
       refreshSentenceActionButtons();
       elements.memorizeBtn.focus();
     }
-    function decideInitialStage(text) {
+    function getInitialStageInfo(text) {
       var key = getSentenceKey(text);
       var entry = loadHeatmap()[key];
-      if (entry && (entry.fails || 0) >= CLOZE_AUTO_FAIL_THRESHOLD && entry.lastPassed === false) return "cloze";
-      return "full";
+      if (entry && (entry.fails || 0) >= CLOZE_AUTO_FAIL_THRESHOLD && entry.lastPassed === false) {
+        return { stage: "cloze", clozeMode: "review" };
+      }
+      return { stage: "full", clozeMode: null };
     }
     function toggleStage() {
       if (!state.active || (state.waitingForNext && state.currentStage !== "cloze")) return;
@@ -1788,9 +1801,10 @@
         return;
       } else {
         var cur = state.currentQueue[state.currentIndex]; if (!cur) return;
-        var cd = buildClozeData(cur.text);
+        var cd = buildClozeData(cur.text, "assist");
         if (!cd) { setFeedback("빈칸 모드가 어렵습니다.", "이 문장은 너무 짧아 빈칸을 만들 수 없습니다.", "", "warning"); return; }
         state.currentStage = "cloze";
+        state.currentClozeMode = "assist";
         state.clozeData = cd;
       }
       state.clozePassedForCurrent = false;
@@ -1802,7 +1816,7 @@
       elements.hintButton.disabled = true;
       elements.sentenceActionRow.hidden = false;
       elements.memorizeMsg.textContent = (state.currentStage === "cloze")
-        ? "빈칸 모드로 바꿨습니다. 읽은 뒤 가리고 빈칸부터 채워 보세요."
+        ? "핵심 어절만 빈칸으로 바꿨습니다. 읽은 뒤 가리고 천천히 채워 보세요."
         : "문장을 읽은 뒤 아래 버튼을 눌러 가리고 쓰세요.";
       updateStageBadge();
       updateStageToggleButton();
@@ -2519,9 +2533,14 @@
       renderSentenceWithKeywords(cur.text);
       elements.sentenceCard.classList.remove("animate-in","memorize","cloze-active","cloze-locked");document.body.classList.remove("cloze-mode");
       void elements.sentenceCard.offsetWidth;elements.sentenceCard.classList.add("animate-in");
-      state.currentStage = decideInitialStage(cur.text);
-      state.clozeData = (state.currentStage === "cloze") ? buildClozeData(cur.text) : null;
-      if (state.currentStage === "cloze" && !state.clozeData) state.currentStage = "full";
+      var stageInfo = getInitialStageInfo(cur.text);
+      state.currentStage = stageInfo.stage;
+      state.currentClozeMode = stageInfo.clozeMode;
+      state.clozeData = (state.currentStage === "cloze") ? buildClozeData(cur.text, state.currentClozeMode) : null;
+      if (state.currentStage === "cloze" && !state.clozeData) {
+        state.currentStage = "full";
+        state.currentClozeMode = null;
+      }
       state.clozePassedForCurrent = false;
       elements.sentenceActionRow.hidden=false;
       elements.memorizeMsg.textContent=(state.currentStage === "cloze")
@@ -2648,7 +2667,7 @@
           "전체 받아쓰기로 이어가려면 '다 읽었어요'를, 바로 다음 문장으로 넘어가려면 '다음 문장'을 누르세요.",
           "good", "success"
         );
-        state.currentStage = "full"; state.clozeData = null;
+        state.currentStage = "full"; state.clozeData = null; state.currentClozeMode = null;
         elements.sentenceCard.classList.remove("cloze-active", "cloze-locked");
         document.body.classList.remove("cloze-mode");
         elements.sentenceActionRow.hidden = false;

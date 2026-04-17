@@ -1144,6 +1144,7 @@
       solvedIds: new Set(), startedAt: null, timerId: null,
       manualSourceSentences: null,
       sourceModalSentences: [], sourceModalDirty: false,
+      enterAdvanceLocked: false,
       active: false, waitingForNext: false, hintLevel: 0,
       difficultyMap: {}, similarityLog: [],
       currentStage: "full", clozeData: null, clozePassedForCurrent: false,
@@ -1848,6 +1849,12 @@
       elements.heatmapPanel.hidden = !!isPracticeActive;
       elements.footerNote.hidden = !!isPracticeActive;
     }
+    function releaseEnterAdvanceLock(e){
+      if (!e || e.key === "Enter") state.enterAdvanceLocked = false;
+    }
+    function shouldBlockHeldEnter(e){
+      return !!(e && (e.repeat || state.enterAdvanceLocked));
+    }
 
     function showComparison(expected,actual) {
       elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();
@@ -2462,7 +2469,9 @@
       }
       if(!shouldOwnPracticeShortcut(e))return;
       if(e.key==="Enter"){
+        if(shouldBlockHeldEnter(e)){consumeShortcutEvent(e);return;}
         if(state.waitingForNext&&!elements.nextButton.disabled){
+          state.enterAdvanceLocked = true;
           consumeShortcutEvent(e);moveToNextSentence();
         }
         return;
@@ -2562,6 +2571,8 @@
       if(e.isComposing||e.keyCode===229)return;
       if(e.key!=="Enter"||e.shiftKey||e.altKey||e.ctrlKey||e.metaKey)return;
       e.preventDefault();
+      if(shouldBlockHeldEnter(e))return;
+      state.enterAdvanceLocked = true;
       if(state.waitingForNext)moveToNextSentence();
       else submitAnswer();
     });
@@ -2570,20 +2581,28 @@
       if(e.isComposing||e.keyCode===229)return;
       if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
         e.preventDefault();
+        if(shouldBlockHeldEnter(e))return;
+        state.enterAdvanceLocked = true;
         if(state.waitingForNext&&!elements.nextButton.disabled)moveToNextSentence();
         else submitAnswer();
         return;
       }
       if(e.key==="Enter"){
         e.preventDefault();
-        if(state.waitingForNext&&!elements.nextButton.disabled){moveToNextSentence();return;}
+        if(shouldBlockHeldEnter(e))return;
+        if(state.waitingForNext&&!elements.nextButton.disabled){
+          state.enterAdvanceLocked = true;
+          moveToNextSentence();
+          return;
+        }
         var inputs=Array.from(getClozeInputs());
         var idx=inputs.indexOf(t);
         if(idx>=0&&idx<inputs.length-1){inputs[idx+1].focus();}
-        else{submitAnswer();}
+        else{state.enterAdvanceLocked = true;submitAnswer();}
       }
     });
     document.addEventListener("keydown",handlePracticeShortcuts,true);
+    document.addEventListener("keyup",releaseEnterAdvanceLock,true);
     document.addEventListener("keyup",suppressShortcutKeyup,true);
     if (speechState.supported) {
       if (typeof window.speechSynthesis.addEventListener === "function") window.speechSynthesis.addEventListener("voiceschanged", loadSpeechVoices);

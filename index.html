@@ -342,6 +342,12 @@
       box-shadow: var(--shadow-sm);
       padding: 14px;
       align-self: start;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: sticky;
+      top: 24px;
+      overflow: hidden;
     }
     .history-panel[hidden] { display: none; }
     .history-panel-head {
@@ -360,7 +366,8 @@
     }
     .history-empty[hidden] { display: none; }
     .history-content {
-      max-height: min(62vh, 680px);
+      flex: 1 1 auto;
+      min-height: 0;
       overflow-y: auto;
       padding-right: 4px;
     }
@@ -404,7 +411,16 @@
     .practice-stat strong { color: var(--text); font-size: 0.9rem; font-weight: 700; }
     .practice-strip-actions {
       display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
+      flex-wrap: wrap; justify-content: flex-end;
     }
+    .history-toggle-button {
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    .history-toggle-button[hidden] { display: none; }
     .strip-icon-button {
       width: 38px; height: 38px; padding: 0;
       display: inline-flex; align-items: center; justify-content: center;
@@ -764,7 +780,6 @@
     }
     @media (max-width: 980px) {
       .practice-layout { grid-template-columns: minmax(0,1fr); }
-      .history-panel { display: none !important; }
     }
     @media (max-width: 600px) {
       .page { width: calc(100% - 24px); margin: 20px auto 24px; }
@@ -790,6 +805,13 @@
       .speech-rate-control select { flex: 1; min-height: 44px; text-align: right; }
       .sentence-action-row .speech-rate-control { width: auto; justify-content: center; }
       .sentence-action-row .speech-rate-control select { min-height: 40px; text-align: left; }
+      .history-panel {
+        position: static;
+        max-height: none;
+      }
+      .history-content {
+        max-height: 260px;
+      }
       .compare-grid { grid-template-columns: 1fr; }
       .celebration-content { padding: 32px 24px; width: 95%; }
       .source-modal-body { padding: 20px; }
@@ -858,6 +880,7 @@
               <span class="source-trigger-icon">&#128196;</span>
               <span class="sr-only">모범 답안 보기</span>
             </button>
+            <button id="historyToggleButton" class="button-secondary history-toggle-button" type="button" hidden aria-expanded="true">이전 문장 접기</button>
             <button id="restartButton" class="button-secondary strip-icon-button" type="button" disabled aria-label="처음부터 다시" title="처음부터 다시">&#8634;</button>
           </div>
         </div>
@@ -869,13 +892,13 @@
       <div id="practiceLayout" class="practice-layout">
         <aside id="historyPanel" class="history-panel" hidden>
           <div class="history-panel-head">
-            <span class="section-label">지금까지 쓴 글</span>
+            <span class="section-label">이전 문장</span>
           </div>
-          <p id="historyEmpty" class="history-empty">통과한 문장이 쌓이면 여기에 이어집니다.</p>
+          <p id="historyEmpty" class="history-empty">이전 문장이 생기면 여기에 이어집니다.</p>
           <div id="historyContent" class="history-content"></div>
         </aside>
 
-        <div class="practice-main">
+        <div id="practiceMain" class="practice-main">
           <div class="sentence-card animate-in" id="sentenceCard">
             <div class="sentence-card-head">
               <span class="section-label">제시 문장</span>
@@ -886,7 +909,7 @@
             <span id="memorizeMsg" class="memorize-msg"></span>
             <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
               <button id="prevSentenceButton" class="button-secondary icon-button" type="button" aria-label="이전 문장으로 가기" title="이전 문장으로 가기">&larr;</button>
-              <button id="readSentenceButton" class="button-secondary icon-button" type="button" aria-label="제시문장 읽기" title="제시문장 읽기" aria-pressed="false">
+              <button id="readSentenceButton" class="button-secondary icon-button" type="button" aria-label="제시문장 읽기 (V)" title="제시문장 읽기 (V)" aria-pressed="false">
                 <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
                   <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
@@ -1194,7 +1217,8 @@
       sentenceCount: $("sentenceCount"),
       progressPosition: $("progressPosition"), progressDone: $("progressDone"),
       progressFill: $("progressFill"),
-      practiceLayout: $("practiceLayout"),
+      practiceLayout: $("practiceLayout"), practiceMain: $("practiceMain"),
+      historyToggleButton: $("historyToggleButton"),
       historyPanel: $("historyPanel"), historyContent: $("historyContent"), historyEmpty: $("historyEmpty"),
       sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
       clozeDisplay: $("clozeDisplay"), stageBadge: $("stageBadge"),
@@ -1229,6 +1253,7 @@
       manualSourceSentences: null,
       sourceModalSentences: [], sourceModalDirty: false,
       enterAdvanceLocked: false,
+      historyCollapsed: false,
       active: false, waitingForNext: false, hintLevel: 0,
       difficultyMap: {}, similarityLog: [],
       currentStage: "full", clozeData: null, currentClozeMode: null, clozePassedForCurrent: false,
@@ -1290,6 +1315,8 @@
     ];
     var sourceModalCopyResetId = null;
     var sourceModalHideTimerId = null;
+    var historyPanelMeasureId = null;
+    var historyPanelResizeObserver = null;
 
     function hashText(s) {
       var h = 5381;
@@ -1954,7 +1981,7 @@
       btn.setAttribute("aria-pressed", speechState.speaking ? "true" : "false");
       btn.innerHTML = speechState.speaking ? ICONS.stop : ICONS.speaker;
       btn.title = speechState.supported
-        ? (speechState.speaking ? "읽기 멈추기" : "제시문장 읽기")
+        ? (speechState.speaking ? "읽기 멈추기 (V)" : "제시문장 읽기 (V)")
         : "읽기 미지원";
       btn.setAttribute("aria-label", btn.title);
     }
@@ -2049,35 +2076,78 @@
         acceptedAtOrder: state.historyAcceptedCounter
       });
     }
-    function renderHistoryPanel() {
-      var entries = state.committedHistory.slice().sort(function(a, b) {
-        return a.sentenceId - b.sentenceId;
+    function getHistoryEntries() {
+      if (!state.sourceSentences.length) return [];
+      if (!state.active) return state.sourceSentences.slice();
+      var cur = state.currentQueue[state.currentIndex];
+      if (!cur || typeof cur.id !== "number") return [];
+      return state.sourceSentences.filter(function(sentence) {
+        return sentence.id < cur.id;
       });
-      var shouldShow = state.active || entries.length > 0;
+    }
+    function updateHistoryToggleButton(hasEntries, showPanel) {
+      if (!elements.historyToggleButton) return;
+      elements.historyToggleButton.hidden = !hasEntries;
+      if (!hasEntries) return;
+      var label = showPanel ? "이전 문장 접기" : "이전 문장 보기";
+      elements.historyToggleButton.textContent = label;
+      elements.historyToggleButton.title = label;
+      elements.historyToggleButton.setAttribute("aria-label", label);
+      elements.historyToggleButton.setAttribute("aria-expanded", showPanel ? "true" : "false");
+    }
+    function toggleHistoryPanel() {
+      var hasEntries = getHistoryEntries().length > 0;
+      if (!hasEntries) return;
+      state.historyCollapsed = !state.historyCollapsed;
+      renderHistoryPanel();
+    }
+    function clearHistoryPanelViewportLimit() {
+      if (elements.historyPanel) elements.historyPanel.style.maxHeight = "";
+      if (elements.historyContent) elements.historyContent.style.maxHeight = "";
+    }
+    function updateHistoryPanelViewportLimit() {
+      historyPanelMeasureId = null;
+      if (!elements.historyPanel || !elements.historyContent || !elements.practiceMain || elements.historyPanel.hidden) {
+        clearHistoryPanelViewportLimit();
+        return;
+      }
+      var mainBottom = Math.floor(elements.practiceMain.getBoundingClientRect().bottom);
+      var panelTop = Math.max(elements.historyPanel.getBoundingClientRect().top, 0);
+      var contentTop = Math.max(elements.historyContent.getBoundingClientRect().top, 0);
+      if (!Number.isFinite(mainBottom) || mainBottom <= 0) {
+        clearHistoryPanelViewportLimit();
+        return;
+      }
+      var panelMax = Math.max(140, mainBottom - panelTop);
+      var contentMax = Math.max(80, mainBottom - contentTop);
+      elements.historyPanel.style.maxHeight = panelMax + "px";
+      elements.historyContent.style.maxHeight = contentMax + "px";
+    }
+    function queueHistoryPanelViewportLimit() {
+      if (historyPanelMeasureId) cancelAnimationFrame(historyPanelMeasureId);
+      historyPanelMeasureId = requestAnimationFrame(updateHistoryPanelViewportLimit);
+    }
+    function renderHistoryPanel() {
+      var entries = getHistoryEntries();
+      var shouldShow = entries.length > 0 && !state.historyCollapsed;
+      updateHistoryToggleButton(entries.length > 0, shouldShow);
       if (elements.historyPanel) elements.historyPanel.hidden = !shouldShow;
       if (elements.practiceLayout) elements.practiceLayout.classList.toggle("has-history-panel", shouldShow);
       if (!shouldShow) {
         elements.historyContent.innerHTML = "";
         elements.historyEmpty.hidden = false;
-        elements.historyEmpty.textContent = "통과한 문장이 쌓이면 여기에 이어집니다.";
+        elements.historyEmpty.textContent = "이전 문장이 생기면 여기에 이어집니다.";
+        clearHistoryPanelViewportLimit();
         return;
       }
-      if (!entries.length) {
-        elements.historyContent.innerHTML = "";
-        elements.historyEmpty.hidden = false;
-        elements.historyEmpty.textContent = "통과한 문장이 쌓이면 여기에 이어집니다.";
-        return;
-      }
-      var latestOrder = 0;
-      for (var i = 0; i < entries.length; i++) {
-        if ((entries[i].acceptedAtOrder || 0) > latestOrder) latestOrder = entries[i].acceptedAtOrder || 0;
-      }
+      var latestId = entries.length ? entries[entries.length - 1].id : 0;
       var html = "";
-      for (var j = 0; j < entries.length; j++) {
-        html += '<p class="history-entry' + (entries[j].acceptedAtOrder === latestOrder ? ' is-latest' : '') + '">' + escapeHtml(entries[j].text) + '</p>';
+      for (var i = 0; i < entries.length; i++) {
+        html += '<p class="history-entry' + (entries[i].id === latestId ? ' is-latest' : '') + '">' + escapeHtml(entries[i].text) + '</p>';
       }
       elements.historyEmpty.hidden = true;
       elements.historyContent.innerHTML = html;
+      queueHistoryPanelViewportLimit();
     }
     function getFeedbackIcon(name){
       var icons = {
@@ -2712,7 +2782,7 @@
       return (e.ctrlKey||e.metaKey)&&!e.altKey&&(e.code==="Slash"||e.key==="/");
     }
     function isPracticeShortcutKey(e){
-      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter"||e.code==="KeyR";
+      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter"||e.code==="KeyR"||e.code==="KeyV";
     }
     function isPracticeOverlayOpen(){
       return !elements.sourceModal.hidden||!elements.celebrationOverlay.hidden;
@@ -2755,7 +2825,7 @@
       if(e.key==="ArrowLeft"){
         moveToPreviousSentence();return;
       }
-      if(e.key==="ArrowDown"){
+      if(e.key==="ArrowDown"||e.code==="KeyV"){
         speakCurrentSentence();return;
       }
       if(e.key==="ArrowRight"){
@@ -2792,6 +2862,7 @@
     elements.readSentenceButton.addEventListener("click",speakCurrentSentence);
     elements.readSpeedSelect.addEventListener("change",handleSpeechRateChange);
     elements.memorizeBtn.addEventListener("click",hideAndWrite);
+    elements.historyToggleButton.addEventListener("click",toggleHistoryPanel);
     elements.stageToggleButton.addEventListener("click",toggleStage);
     elements.heatmapList.addEventListener("click",function(e){
       var chip=e.target.closest(".heatmap-chip");if(!chip)return;
@@ -2872,6 +2943,8 @@
     document.addEventListener("keydown",handlePracticeShortcuts,true);
     document.addEventListener("keyup",releaseEnterAdvanceLock,true);
     document.addEventListener("keyup",suppressShortcutKeyup,true);
+    window.addEventListener("resize",queueHistoryPanelViewportLimit);
+    window.addEventListener("scroll",queueHistoryPanelViewportLimit,{passive:true});
     if (speechState.supported) {
       if (typeof window.speechSynthesis.addEventListener === "function") window.speechSynthesis.addEventListener("voiceschanged", loadSpeechVoices);
       else window.speechSynthesis.onvoiceschanged = loadSpeechVoices;
@@ -2884,6 +2957,10 @@
     renderHeatmapPanel();
     setPracticeAuxVisibility(false);
     renderHistoryPanel();
+    if (typeof ResizeObserver === "function" && elements.practiceMain) {
+      historyPanelResizeObserver = new ResizeObserver(queueHistoryPanelViewportLimit);
+      historyPanelResizeObserver.observe(elements.practiceMain);
+    }
     refreshSourceMeta();refreshStats();refreshProgress();
   </script>
 </body>

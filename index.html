@@ -269,10 +269,56 @@
       filter: blur(8px); user-select: none; pointer-events: none;
       transition: filter var(--transition-normal);
     }
-    .sentence-card .sentence-action-row { margin-top: 14px; }
+    .sentence-card .sentence-action-row {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .sentence-action-row button {
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .sentence-action-row .icon-button {
+      width: 40px;
+      min-width: 40px;
+      padding: 0;
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .sentence-action-row .button-icon {
+      width: 18px;
+      height: 18px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .sentence-action-row .compact-button,
+    .sentence-action-row .memorize-btn {
+      padding-inline: 14px;
+      white-space: nowrap;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
     .speech-rate-control {
       display: inline-flex; align-items: center; gap: 8px;
-      min-height: 44px; padding: 0 12px;
+      min-height: 40px; padding: 0 10px;
       border: 1px solid var(--line); border-radius: var(--radius-sm);
       background: rgba(255,255,255,0.9); color: var(--muted);
     }
@@ -281,7 +327,7 @@
     }
     .speech-rate-control select {
       border: 0; background: transparent; color: var(--text); font: inherit; font-size: 0.85rem;
-      padding: 8px 24px 8px 0; cursor: pointer;
+      min-width: 84px; min-height: 36px; padding: 6px 20px 6px 0; cursor: pointer;
     }
     .speech-rate-control select:focus { outline: none; }
     .speech-rate-control:focus-within {
@@ -527,8 +573,16 @@
       .target-sentence { font-size: 1.15rem; }
       .button-row { flex-direction: column; }
       .button-row button { width: 100%; min-height: 44px; }
+      .sentence-action-row { flex-direction: row; align-items: stretch; }
+      .sentence-action-row button { width: auto; min-height: 40px; }
+      .sentence-action-row .icon-button { width: 40px; min-width: 40px; }
+      .sentence-action-row .compact-button,
+      .sentence-action-row .memorize-btn,
+      .sentence-action-row .speech-rate-control { flex: 1 1 auto; }
       .speech-rate-control { width: 100%; justify-content: space-between; }
       .speech-rate-control select { flex: 1; min-height: 44px; text-align: right; }
+      .sentence-action-row .speech-rate-control { width: auto; justify-content: center; }
+      .sentence-action-row .speech-rate-control select { min-height: 40px; text-align: left; }
       .compare-grid { grid-template-columns: 1fr; }
       .summary-strip { grid-template-columns: repeat(2,minmax(0,1fr)); }
       .status-line { grid-template-columns: 1fr; }
@@ -620,20 +674,26 @@
         <p id="clozeDisplay" class="cloze-display" hidden></p>
         <span id="memorizeMsg" class="memorize-msg"></span>
         <div id="sentenceActionRow" class="button-row sentence-action-row" hidden>
-          <button id="prevSentenceButton" class="button-secondary" type="button">이전 문장으로 가기 <span class="shortcut-hint">&larr;</span></button>
-          <button id="stageToggleButton" class="button-secondary" type="button" title="빈칸 모드로 먼저 연습하거나, 전체 받아쓰기로 바로 갑니다.">🧩 빈칸으로 먼저</button>
-          <button id="readSentenceButton" class="button-secondary" type="button" aria-pressed="false">제시문장 읽기 <span class="shortcut-hint">&darr;</span></button>
+          <button id="prevSentenceButton" class="button-secondary icon-button" type="button" aria-label="이전 문장으로 가기" title="이전 문장으로 가기">&larr;</button>
+          <button id="readSentenceButton" class="button-secondary icon-button" type="button" aria-label="제시문장 읽기" title="제시문장 읽기" aria-pressed="false">
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+              <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+              <path d="M18 6a8.5 8.5 0 0 1 0 12"></path>
+            </svg>
+          </button>
+          <button id="skipSentenceButton" class="button-secondary icon-button" type="button" aria-label="다음 문장으로 가기" title="다음 문장으로 가기">&rarr;</button>
           <div class="speech-rate-control">
-            <label for="readSpeedSelect">읽기 속도</label>
+            <label for="readSpeedSelect" class="sr-only">읽기 속도</label>
             <select id="readSpeedSelect" aria-label="제시문장 읽기 속도">
-              <option value="0.8">천천히 0.8x</option>
-              <option value="0.95">기본 0.95x</option>
-              <option value="1.1">조금 빠르게 1.1x</option>
-              <option value="1.25">빠르게 1.25x</option>
+              <option value="0.8">0.8x</option>
+              <option value="0.95">0.95x</option>
+              <option value="1.1">1.1x</option>
+              <option value="1.25">1.25x</option>
             </select>
           </div>
-          <button id="memorizeBtn" class="button-primary memorize-btn" type="button">다 읽었어요 - 가리고 쓰기 <span class="shortcut-hint">Space</span></button>
-          <button id="skipSentenceButton" class="button-secondary" type="button">다음 문장으로 가기 <span class="shortcut-hint">&rarr;</span></button>
+          <button id="stageToggleButton" class="button-secondary compact-button" type="button" title="빈칸 모드로 먼저 연습하거나, 전체 받아쓰기로 바로 갑니다.">🧩 빈칸 먼저</button>
+          <button id="memorizeBtn" class="button-primary memorize-btn" type="button">가리고 쓰기 <span class="shortcut-hint">Space</span></button>
         </div>
       </div>
 
@@ -962,6 +1022,10 @@
       speaking: false,
       rate: 0.95
     };
+    var ICONS = {
+      speaker: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18 6a8.5 8.5 0 0 1 0 12"></path></svg>',
+      stop: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect></svg>'
+    };
     var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
     var PASS_THRESHOLD = 80;
     var READ_SPEED_KEY = "nonsul-practice/read-speed";
@@ -1269,9 +1333,9 @@
       if (!state.active || state.waitingForNext) { btn.disabled = true; return; }
       btn.disabled = false;
       if (state.currentStage === "cloze") {
-        btn.textContent = "💪 바로 전체로"; btn.classList.add("is-cloze");
+        btn.textContent = "💪 전체로"; btn.classList.add("is-cloze");
       } else {
-        btn.textContent = "🧩 빈칸으로 먼저"; btn.classList.remove("is-cloze");
+        btn.textContent = "🧩 빈칸 먼저"; btn.classList.remove("is-cloze");
       }
     }
     function decideInitialStage(text) {
@@ -1421,9 +1485,11 @@
       if (elements.readSpeedSelect) elements.readSpeedSelect.disabled = !speechState.supported;
       btn.classList.toggle("is-active", speechState.speaking);
       btn.setAttribute("aria-pressed", speechState.speaking ? "true" : "false");
-      btn.innerHTML = speechState.supported
-        ? (speechState.speaking ? "읽는 중 - 멈추기" : "제시문장 읽기") + ' <span class="shortcut-hint">&darr;</span>'
+      btn.innerHTML = speechState.speaking ? ICONS.stop : ICONS.speaker;
+      btn.title = speechState.supported
+        ? (speechState.speaking ? "읽기 멈추기" : "제시문장 읽기")
         : "읽기 미지원";
+      btn.setAttribute("aria-label", btn.title);
     }
     function speakCurrentSentence(forceRestart) {
       if (!speechState.supported) {

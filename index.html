@@ -565,6 +565,16 @@
       border-radius: var(--radius-sm);
       font-size: 1rem; line-height: 1;
     }
+    .strip-icon-button .button-icon {
+      width: 18px;
+      height: 18px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     .progress-track { height: 6px; margin-top: 0; background: var(--soft); border-radius: 100px; overflow: hidden; }
     .progress-fill {
       width: 0; height: 100%;
@@ -1039,6 +1049,7 @@
       <p class="inline-note">구두점(마침표, 쉼표 등)은 채점에서 제외되며, 입력한 모범 답안은 이 브라우저에 자동 저장됩니다.</p>
       <div class="button-row">
         <button id="startButton" class="button-primary">연습 시작</button>
+        <button id="shareToPhoneButton" class="button-secondary" type="button">휴대폰으로 보내기</button>
       </div>
       <div class="meta-list">
         <div class="meta-item">
@@ -1076,6 +1087,9 @@
             <button id="sourceTrigger" class="source-trigger" type="button" hidden aria-label="모범 답안 보기" title="모범 답안 보기">
               <span class="source-trigger-icon">&#128196;</span>
               <span class="sr-only">모범 답안 보기</span>
+            </button>
+            <button id="practiceShareButton" class="button-secondary strip-icon-button" type="button" hidden aria-label="현재 공부 내용을 휴대폰으로 보내기" title="휴대폰으로 보내기">
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-2"></path><path d="M5 15V7a2 2 0 0 1 2-2h2"></path><path d="M12 15V5"></path><path d="m8.5 8.5 3.5-3.5 3.5 3.5"></path></svg>
             </button>
             <button id="historyToggleButton" class="button-secondary history-toggle-button" type="button" hidden aria-expanded="true">이전 문장 접기</button>
             <button id="restartButton" class="button-secondary strip-icon-button" type="button" disabled aria-label="처음부터 다시" title="처음부터 다시">&#8634;</button>
@@ -1429,6 +1443,7 @@
       sourceModalEmpty: $("sourceModalEmpty"),
       sourceModalCount: $("sourceModalCount"), sourceModalRetry: $("sourceModalRetry"),
       sourceModalCancel: $("sourceModalCancel"), sourceModalSave: $("sourceModalSave"), sourceModalApply: $("sourceModalApply"),
+      shareToPhoneButton: $("shareToPhoneButton"), practiceShareButton: $("practiceShareButton"),
       startButton: $("startButton"), restartButton: $("restartButton"),
       sentenceCount: $("sentenceCount"),
       progressPosition: $("progressPosition"), progressDone: $("progressDone"),
@@ -1524,6 +1539,7 @@
       mic: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5a2.5 2.5 0 0 1 2.5 2.5v4.5a2.5 2.5 0 0 1-5 0V7a2.5 2.5 0 0 1 2.5-2.5Z"></path><path d="M7.5 11.5a4.5 4.5 0 0 0 9 0"></path><path d="M12 16v3"></path><path d="M9 19h6"></path></svg>',
       stopRecord: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect></svg>',
       hard: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 5.5h9a1 1 0 0 1 1 1V19l-5-3-5 3V6.5a1 1 0 0 1 1-1Z"></path></svg>',
+      share: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-2"></path><path d="M5 15V7a2 2 0 0 1 2-2h2"></path><path d="M12 15V5"></path><path d="m8.5 8.5 3.5-3.5 3.5 3.5"></path></svg>',
       play: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5Z"></path></svg>',
       pause: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7v10"></path><path d="M14 7v10"></path></svg>',
       trash: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7.5h15"></path><path d="M9.5 10.5v6"></path><path d="M14.5 10.5v6"></path><path d="M7.5 7.5V6a1.5 1.5 0 0 1 1.5-1.5h6A1.5 1.5 0 0 1 16.5 6v1.5"></path><path d="m6.5 7.5.7 10.1A1.5 1.5 0 0 0 8.7 19h6.6a1.5 1.5 0 0 0 1.5-1.4l.7-10.1"></path></svg>',
@@ -1543,6 +1559,12 @@
     var CLOZE_REVIEW_BLANK_RATIO = 0.35;
     var CLOZE_REVIEW_MAX_BLANKS = 4;
     var CLOZE_AUTO_FAIL_THRESHOLD = 2;
+    var AUTO_MERGE_SHORT_SENTENCE_MAX_CHARS = 30;
+    var AUTO_MERGE_SHORT_SENTENCE_MAX_WORDS = 8;
+    var AUTO_MERGE_FOLLOWUP_MAX_CHARS = 34;
+    var AUTO_MERGE_FOLLOWUP_MAX_WORDS = 10;
+    var AUTO_MERGE_COMBINED_MAX_CHARS = 68;
+    var AUTO_MERGE_COMBINED_MAX_WORDS = 18;
     var KEYWORD_STOPWORDS = {
       "은": true, "는": true, "이": true, "가": true, "을": true, "를": true,
       "에": true, "에서": true, "에게": true, "께": true, "의": true, "도": true,
@@ -1636,6 +1658,46 @@
     }
     function normalizeSourceSentenceValue(value) {
       return String(value || "").replace(/\r\n/g, "\n").replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+    }
+    function getSourceSentenceMetrics(text) {
+      var value = normalizeSourceSentenceValue(text);
+      return {
+        text: value,
+        chars: value.replace(/\s+/g, "").length,
+        words: value ? value.split(/\s+/).length : 0
+      };
+    }
+    function shouldKeepSentenceBoundary(current, next) {
+      if (!current || !next) return true;
+      if (/[!?！？:：]["'"')\]]*$/.test(current)) return true;
+      if (/^(?:[-•·]|[0-9]+[.)])/.test(next)) return true;
+      return false;
+    }
+    function shouldMergeSourceSentences(current, next) {
+      var cur = getSourceSentenceMetrics(current);
+      var nxt = getSourceSentenceMetrics(next);
+      if (!cur.text || !nxt.text) return false;
+      if (shouldKeepSentenceBoundary(cur.text, nxt.text)) return false;
+      var currentShort = cur.chars <= AUTO_MERGE_SHORT_SENTENCE_MAX_CHARS || cur.words <= AUTO_MERGE_SHORT_SENTENCE_MAX_WORDS;
+      var nextShort = nxt.chars <= AUTO_MERGE_FOLLOWUP_MAX_CHARS || nxt.words <= AUTO_MERGE_FOLLOWUP_MAX_WORDS;
+      var combinedChars = cur.chars + nxt.chars;
+      var combinedWords = cur.words + nxt.words;
+      return currentShort && nextShort &&
+        combinedChars <= AUTO_MERGE_COMBINED_MAX_CHARS &&
+        combinedWords <= AUTO_MERGE_COMBINED_MAX_WORDS;
+    }
+    function mergeShortSourceSentences(sentences) {
+      var merged = [];
+      for (var i = 0; i < sentences.length; i++) {
+        var current = normalizeSourceSentenceValue(sentences[i]);
+        if (!current) continue;
+        while (i + 1 < sentences.length && shouldMergeSourceSentences(current, sentences[i + 1])) {
+          current = normalizeSourceSentenceValue(current + " " + sentences[i + 1]);
+          i++;
+        }
+        merged.push(current);
+      }
+      return merged;
     }
     function getManualSourceText(sentences) {
       return (sentences || []).map(normalizeSourceSentenceValue).filter(Boolean).join("\n");
@@ -2182,11 +2244,11 @@
       if (state.manualSourceSentences && normalizeSourceText(cleaned) === normalizeSourceText(getManualSourceText(state.manualSourceSentences))) {
         return state.manualSourceSentences.slice();
       }
-      return cleaned.split(/\n+/).map(function(l){return l.trim()}).filter(Boolean)
+      return mergeShortSourceSentences(cleaned.split(/\n+/).map(function(l){return l.trim()}).filter(Boolean)
         .flatMap(function(line) {
           var m = line.match(/[^.!?。！？\n]+[.!?。！？…]?["'"')\]]*/g) || [];
           return m.map(function(s){return s.replace(/\s+/g," ").trim()}).filter(Boolean);
-        });
+        }));
     }
     function normalizeForCompare(t) { return t.replace(/\s+/g," ").trim(); }
     function normalizeForGrading(t) {
@@ -2214,6 +2276,7 @@
       elements.sentenceCount.textContent = n + "문장";
       elements.startButton.disabled = n === 0;
       if (!state.active) elements.restartButton.disabled = n === 0;
+      updatePhoneShareButtons();
     }
     function saveSourceDraft() {
       try {
@@ -3170,6 +3233,88 @@
         sourceModalCopyResetId = setTimeout(resetSourceModalCopyState, 1400);
       });
     }
+    function getShareableSentences() {
+      if (state.active && state.sourceSentences.length) {
+        return state.sourceSentences.map(function(sentence) { return sentence.text; });
+      }
+      return splitIntoSentences(elements.sourceText.value);
+    }
+    function getImportantSentenceTexts() {
+      if (!state.sourceSentences.length) return [];
+      return state.sourceSentences.filter(function(sentence) {
+        return isSentenceMarkedHard(sentence.id);
+      }).map(function(sentence) {
+        return sentence.text;
+      });
+    }
+    function buildPhoneShareText() {
+      var sentences = getShareableSentences();
+      if (!sentences.length) return "";
+      var lines = ["[생각이 피어나는 연습장]"];
+      if (state.active && state.sourceSentences.length) {
+        lines.push("진행 위치: " + elements.progressPosition.textContent);
+        lines.push("완료: " + elements.progressDone.textContent);
+        var cur = state.currentQueue[state.currentIndex];
+        if (cur && cur.text) {
+          lines.push("");
+          lines.push("현재 문장");
+          lines.push(cur.text);
+        }
+        var importantSentences = getImportantSentenceTexts();
+        if (importantSentences.length) {
+          lines.push("");
+          lines.push("중요 표시 문장");
+          for (var i = 0; i < importantSentences.length; i++) {
+            lines.push(String(i + 1) + ". " + importantSentences[i]);
+          }
+        }
+      }
+      lines.push("");
+      lines.push("전체 공부 내용");
+      for (var j = 0; j < sentences.length; j++) lines.push(sentences[j]);
+      return lines.join("\n");
+    }
+    function copyPhoneShareText(text) {
+      return (navigator.clipboard && window.isSecureContext)
+        ? navigator.clipboard.writeText(text)
+        : (fallbackCopyText(text) ? Promise.resolve() : Promise.reject(new Error("copy failed")));
+    }
+    function updatePhoneShareButtons() {
+      var hasContent = !!buildPhoneShareText();
+      if (elements.shareToPhoneButton) elements.shareToPhoneButton.disabled = !hasContent;
+      if (elements.practiceShareButton) {
+        elements.practiceShareButton.hidden = !state.active;
+        elements.practiceShareButton.disabled = !hasContent;
+        elements.practiceShareButton.innerHTML = ICONS.share;
+      }
+    }
+    function shareCurrentStudyToPhone() {
+      var text = buildPhoneShareText();
+      if (!text) {
+        setFeedback("보낼 내용이 없습니다.", "먼저 모범 답안을 넣거나 연습을 시작해 주세요.", "", "warning");
+        return;
+      }
+      var fallbackMessage = "브라우저 공유가 어려워 현재 공부 내용을 클립보드에 복사했습니다. 휴대폰에서 붙여넣어 보낼 수 있습니다.";
+      if (navigator.share) {
+        navigator.share({
+          title: "생각이 피어나는 연습장",
+          text: text
+        }).catch(function(error) {
+          if (error && error.name === "AbortError") return;
+          copyPhoneShareText(text).then(function() {
+            setFeedback("휴대폰 전송용 내용을 복사했습니다.", fallbackMessage, "", "note");
+          }).catch(function() {
+            setFeedback("휴대폰으로 보내지 못했습니다.", "이 브라우저는 시스템 공유와 자동 복사를 모두 지원하지 않습니다.", "bad", "warning");
+          });
+        });
+        return;
+      }
+      copyPhoneShareText(text).then(function() {
+        setFeedback("휴대폰 전송용 내용을 복사했습니다.", fallbackMessage, "", "note");
+      }).catch(function() {
+        setFeedback("휴대폰으로 보내지 못했습니다.", "이 브라우저는 시스템 공유와 자동 복사를 모두 지원하지 않습니다.", "bad", "warning");
+      });
+    }
     function syncSourceModalMeta() {
       elements.sourceModalCount.textContent = String(state.sourceModalSentences.length);
       elements.sourceModalRetry.textContent = String(state.retryQueue.length);
@@ -3540,6 +3685,7 @@
       elements.stageBadge.hidden=true;
       recordingState.currentMeta = null;
       updateSentenceRecordingButtons();
+      updatePhoneShareButtons();
       renderHistoryPanel();
       renderHeatmapPanel();
       setPracticeAuxVisibility(false);
@@ -3565,6 +3711,7 @@
       setFeedback("연습을 시작합니다.","한 문장씩 읽고 기억한 뒤 써보세요.","","start");
       setPracticeAuxVisibility(true);
       elements.sourceSection.hidden=true;elements.sourceTrigger.hidden=false;
+      updatePhoneShareButtons();
       renderCurrentSentence();
     }
     function submitAnswer(){
@@ -3835,6 +3982,8 @@
       else if (action === "delete") deleteSourceModalSentence(index);
     });
     elements.sourceModalCopy.addEventListener("click",copySourceModalText);
+    elements.shareToPhoneButton.addEventListener("click",shareCurrentStudyToPhone);
+    elements.practiceShareButton.addEventListener("click",shareCurrentStudyToPhone);
     elements.sourceModalCancel.addEventListener("click",function(){hideSourceModal();});
     elements.sourceModalSave.addEventListener("click",function(){handleSourceModalSave(false);});
     elements.sourceModalApply.addEventListener("click",function(){handleSourceModalSave(true);});

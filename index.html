@@ -1056,6 +1056,14 @@
           <span>자동 분리 문장 수</span>
           <strong id="sentenceCount">0문장</strong>
         </div>
+        <div class="meta-item">
+          <span>문자 수 (공백 포함)</span>
+          <strong id="charCountWithSpaces">0자</strong>
+        </div>
+        <div class="meta-item">
+          <span>문자 수 (공백 제외)</span>
+          <strong id="charCountWithoutSpaces">0자</strong>
+        </div>
       </div>
     </section>
 
@@ -1445,7 +1453,7 @@
       sourceModalCancel: $("sourceModalCancel"), sourceModalSave: $("sourceModalSave"), sourceModalApply: $("sourceModalApply"),
       shareToPhoneButton: $("shareToPhoneButton"), practiceShareButton: $("practiceShareButton"),
       startButton: $("startButton"), restartButton: $("restartButton"),
-      sentenceCount: $("sentenceCount"),
+      sentenceCount: $("sentenceCount"), charCountWithSpaces: $("charCountWithSpaces"), charCountWithoutSpaces: $("charCountWithoutSpaces"),
       progressPosition: $("progressPosition"), progressDone: $("progressDone"),
       progressFill: $("progressFill"),
       practiceLayout: $("practiceLayout"), practiceMain: $("practiceMain"),
@@ -2272,8 +2280,13 @@
     }
 
     function refreshSourceMeta() {
-      var n = splitIntoSentences(elements.sourceText.value).length;
+      var sourceText = elements.sourceText.value || "";
+      var n = splitIntoSentences(sourceText).length;
+      var charsWithSpaces = Array.from(sourceText).length;
+      var charsWithoutSpaces = Array.from(sourceText.replace(/\s+/g, "")).length;
       elements.sentenceCount.textContent = n + "문장";
+      elements.charCountWithSpaces.textContent = charsWithSpaces + "자";
+      elements.charCountWithoutSpaces.textContent = charsWithoutSpaces + "자";
       elements.startButton.disabled = n === 0;
       if (!state.active) elements.restartButton.disabled = n === 0;
       updatePhoneShareButtons();

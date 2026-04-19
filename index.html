@@ -1684,6 +1684,7 @@
       startedAt: 0,
       elapsedMs: 0,
       timerId: null,
+      stopRequested: false,
       pendingStopMode: "",
       recordingStorageKey: "",
       currentStorageKey: "",
@@ -3134,6 +3135,7 @@
     function resetRecordingCaches() {
       recordingState.lookupToken += 1;
       recordingState.loading = false;
+      recordingState.stopRequested = false;
       recordingState.currentStorageKey = "";
       recordingState.currentMeta = null;
       recordingState.metaByStorageKey = {};
@@ -4262,16 +4264,19 @@
       var currentKey = getCurrentSentenceRecordingStorageKey();
       var supportMessage = getSentenceRecordingSupportMessage();
       var isRecording = !!(recordingState.isRecording && currentKey && recordingState.recordingStorageKey === currentKey);
+      var isStopping = !!(recordingState.stopRequested && currentKey && recordingState.recordingStorageKey === currentKey);
       var isPlaying = !!(recordingState.playbackAudio && currentKey && recordingState.playbackStorageKey === currentKey);
       var hasRecording = !!(recordingState.currentMeta && recordingState.currentMeta.storageKey === currentKey);
       var isBusy = recordingState.loading;
 
-      recordBtn.innerHTML = isRecording
+      recordBtn.innerHTML = isStopping
+        ? (ICONS.stopRecord + '<span>저장 중...</span>')
+        : isRecording
         ? (ICONS.stopRecord + '<span>저장 <span class="shortcut-hint">O</span></span>')
         : (ICONS.mic + '<span>' + (hasRecording ? "다시 녹음" : "녹음") + ' <span class="shortcut-hint">O</span></span>');
-      recordBtn.classList.toggle("is-recording", isRecording);
+      recordBtn.classList.toggle("is-recording", isRecording || isStopping);
       recordBtn.disabled = !controlsVisible || !!supportMessage || isBusy;
-      recordBtn.title = supportMessage || (isRecording ? "녹음을 멈추고 저장 (O)" : "현재 문장 녹음 (O)");
+      recordBtn.title = supportMessage || (isStopping ? "녹음을 저장하는 중입니다." : isRecording ? "녹음을 멈추고 저장 (O)" : "현재 문장 녹음 (O)");
       recordBtn.setAttribute("aria-label", recordBtn.title);
 
       playBtn.innerHTML = isPlaying ? ICONS.pause : ICONS.play;
@@ -4287,8 +4292,9 @@
       deleteBtn.setAttribute("aria-label", deleteBtn.title);
 
       hint.hidden = !controlsVisible;
-      hint.className = "recording-hint" + (isRecording ? " is-recording" : hasRecording ? " is-ready" : "");
+      hint.className = "recording-hint" + ((isRecording || isStopping) ? " is-recording" : hasRecording ? " is-ready" : "");
       if (supportMessage) hint.textContent = supportMessage;
+      else if (isStopping) hint.textContent = "녹음을 저장하는 중입니다.";
       else if (isBusy) hint.textContent = "녹음 정보를 준비하는 중입니다.";
       else if (isRecording) hint.textContent = "녹음 중 " + formatRecordingDuration(recordingState.elapsedMs) + " · 이 문장 음성은 이 브라우저에만 저장됩니다.";
       else if (hasRecording) hint.textContent = "저장된 녹음 " + formatRecordingDuration(recordingState.currentMeta.durationMs || 0) + " · 이 브라우저에만 저장됩니다.";
@@ -4338,7 +4344,10 @@
     }
     function finishSentenceRecording(mode) {
       if (!recordingState.recorder || recordingState.recorder.state === "inactive") return false;
+      if (recordingState.stopRequested) return true;
       recordingState.pendingStopMode = mode || "manual";
+      recordingState.stopRequested = true;
+      recordingState.isRecording = false;
       recordingState.loading = true;
       stopRecordingTimer();
       updateSentenceRecordingButtons();
@@ -4346,6 +4355,8 @@
         recordingState.recorder.stop();
         return true;
       } catch (error) {
+        recordingState.stopRequested = false;
+        recordingState.isRecording = true;
         recordingState.loading = false;
         updateSentenceRecordingButtons();
         return false;
@@ -4359,6 +4370,7 @@
       var durationMs = Math.max(0, Date.now() - recordingState.startedAt);
 
       recordingState.isRecording = false;
+      recordingState.stopRequested = false;
       recordingState.recorder = null;
       recordingState.recordingStorageKey = "";
       recordingState.elapsedMs = durationMs;
@@ -4462,6 +4474,7 @@
         recordingState.startedAt = Date.now();
         recordingState.elapsedMs = 0;
         recordingState.loading = false;
+        recordingState.stopRequested = false;
         recordingState.isRecording = true;
         recorder.addEventListener("dataavailable", function(event) {
           if (event.data && event.data.size) chunks.push(event.data);
@@ -4476,6 +4489,7 @@
         setFeedback("녹음을 시작했습니다.", "문장을 읽고 저장을 누르면 이 브라우저에만 남습니다.", "", "note");
       }).catch(function(error) {
         recordingState.loading = false;
+        recordingState.stopRequested = false;
         recordingState.isRecording = false;
         recordingState.recorder = null;
         recordingState.recordingStorageKey = "";

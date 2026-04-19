@@ -1860,6 +1860,28 @@
       }
       return merged;
     }
+    function shouldMergeDecimalSplitSourceSentences(current, next) {
+      var cur = normalizeSourceSentenceValue(current);
+      var nxt = normalizeSourceSentenceValue(next);
+      if (!cur || !nxt) return false;
+      return /\d\.$/.test(cur) && /^\d/.test(nxt);
+    }
+    function mergeDecimalSplitSourceSentences(sentences) {
+      var merged = [];
+      for (var i = 0; i < (sentences || []).length; i++) {
+        var current = normalizeSourceSentenceValue(sentences[i]);
+        if (!current) continue;
+        while (i + 1 < sentences.length && shouldMergeDecimalSplitSourceSentences(current, sentences[i + 1])) {
+          current = normalizeSourceSentenceValue(current.replace(/\s+$/g, "") + normalizeSourceSentenceValue(sentences[i + 1]).replace(/^\s+/g, ""));
+          i++;
+        }
+        merged.push(current);
+      }
+      return merged;
+    }
+    function healDecimalSplitSourceText(text) {
+      return String(text || "").replace(/(\d)\.\s*\n+\s*(\d)/g, "$1.$2");
+    }
     function normalizeTopicTitleValue(value) {
       return String(value || "").replace(/\s+/g, " ").trim();
     }
@@ -1885,7 +1907,7 @@
       return (sentences || []).map(normalizeSourceSentenceValue).filter(Boolean).join("\u241E");
     }
     function sanitizeManualSourceSentences(sentences) {
-      var cleaned = (sentences || []).map(normalizeSourceSentenceValue).filter(Boolean);
+      var cleaned = mergeDecimalSplitSourceSentences((sentences || []).map(normalizeSourceSentenceValue).filter(Boolean));
       return cleaned.length ? cleaned : null;
     }
     function normalizeIdList(list) {
@@ -2118,7 +2140,7 @@
       return {
         id: topicOptions.id || createTopicId(),
         title: normalizeTopicTitleValue(topicOptions.title) || getNextTopicDefaultTitle(topicOptions.topicsContext),
-        sourceText: String(topicOptions.sourceText || ""),
+        sourceText: healDecimalSplitSourceText(String(topicOptions.sourceText || "")),
         manualSourceSentences: manualSourceSentences,
         practiceSession: practiceSession,
         updatedAt: Number.isFinite(topicOptions.updatedAt) ? topicOptions.updatedAt : Date.now()
@@ -2799,17 +2821,50 @@
       updateStageToggleButton();
     }
 
+    function isSourceSentenceBoundaryChar(ch) {
+      return /[.!?。！？…]/.test(ch);
+    }
+    function isSourceDecimalPoint(line, index) {
+      if (line.charAt(index) !== ".") return false;
+      return /\d/.test(line.charAt(index - 1)) && /\d/.test(line.charAt(index + 1));
+    }
+    function splitSourceLineIntoSentences(line) {
+      var sentences = [];
+      var start = 0;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line.charAt(i);
+        if (!isSourceSentenceBoundaryChar(ch)) continue;
+        if (isSourceDecimalPoint(line, i)) continue;
+
+        var end = i + 1;
+        while (end < line.length && isSourceSentenceBoundaryChar(line.charAt(end)) && !isSourceDecimalPoint(line, end)) {
+          end++;
+        }
+        while (end < line.length && /["')\]」』）》〉）]/.test(line.charAt(end))) {
+          end++;
+        }
+
+        var sentence = line.slice(start, end).replace(/\s+/g, " ").trim();
+        if (sentence) sentences.push(sentence);
+        start = end;
+        while (start < line.length && /\s/.test(line.charAt(start))) start++;
+        i = end - 1;
+      }
+
+      var rest = line.slice(start).replace(/\s+/g, " ").trim();
+      if (rest) sentences.push(rest);
+      return sentences;
+    }
     function splitSourceTextIntoSentences(text, manualSourceSentences) {
-      var cleaned = text.replace(/\r\n/g,"\n").replace(/\u00a0/g," ").trim();
+      var cleaned = healDecimalSplitSourceText(text).replace(/\r\n/g,"\n").replace(/\u00a0/g," ").trim();
       if (!cleaned) return [];
       if (manualSourceSentences && normalizeSourceText(cleaned) === normalizeSourceText(getManualSourceText(manualSourceSentences))) {
-        return manualSourceSentences.slice();
+        return mergeDecimalSplitSourceSentences(manualSourceSentences.slice());
       }
-      return mergeShortSourceSentences(cleaned.split(/\n+/).map(function(l){return l.trim()}).filter(Boolean)
+      return mergeShortSourceSentences(mergeDecimalSplitSourceSentences(cleaned.split(/\n+/).map(function(l){return l.trim()}).filter(Boolean)
         .flatMap(function(line) {
-          var m = line.match(/[^.!?。！？\n]+[.!?。！？…]?["'"')\]]*/g) || [];
-          return m.map(function(s){return s.replace(/\s+/g," ").trim()}).filter(Boolean);
-        }));
+          return splitSourceLineIntoSentences(line);
+        })));
     }
     function splitIntoSentences(text) {
       return splitSourceTextIntoSentences(text, state.manualSourceSentences);
@@ -3214,7 +3269,8 @@
     function saveSourceDraft() {
       var topic = ensureSelectedTopic();
       if (!topic) return;
-      var nextSourceText = elements.sourceText.value || "";
+      var nextSourceText = healDecimalSplitSourceText(elements.sourceText.value || "");
+      if (elements.sourceText.value !== nextSourceText) elements.sourceText.value = nextSourceText;
       var nextManualSourceSentences = state.manualSourceSentences &&
         normalizeSourceText(nextSourceText) === normalizeSourceText(getManualSourceText(state.manualSourceSentences))
         ? state.manualSourceSentences.slice()

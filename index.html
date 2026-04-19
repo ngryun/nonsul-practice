@@ -1181,6 +1181,8 @@
       <div class="button-row">
         <button id="startButton" class="button-primary">연습 시작</button>
         <button id="saveTopicButton" class="button-secondary" type="button">저장하기</button>
+        <button id="playTopicRecordingsButton" class="button-secondary" type="button">주제 녹음 이어듣기</button>
+        <button id="exportTopicRecordingsButton" class="button-secondary" type="button">주제 녹음 WAV 내보내기</button>
         <button id="exportBackupButton" class="button-secondary" type="button">백업 내보내기</button>
         <button id="importBackupButton" class="button-secondary" type="button">백업 불러오기</button>
         <button id="shareToPhoneButton" class="button-secondary" type="button">휴대폰으로 보내기</button>
@@ -1588,6 +1590,7 @@
       topicSelect: $("topicSelect"), topicTitleInput: $("topicTitleInput"),
       topicNewButton: $("topicNewButton"), topicDeleteButton: $("topicDeleteButton"),
       saveTopicButton: $("saveTopicButton"),
+      playTopicRecordingsButton: $("playTopicRecordingsButton"), exportTopicRecordingsButton: $("exportTopicRecordingsButton"),
       exportBackupButton: $("exportBackupButton"), importBackupButton: $("importBackupButton"),
       backupFileInput: $("backupFileInput"),
       practiceTopicSwitcher: $("practiceTopicSwitcher"), practiceTopicSelect: $("practiceTopicSelect"),
@@ -1691,6 +1694,17 @@
       playbackUrl: "",
       playbackStorageKey: ""
     };
+    var topicAudioState = {
+      playbackLoading: false,
+      exportLoading: false,
+      playbackAudio: null,
+      playbackUrl: "",
+      playbackTopicId: "",
+      playbackQueue: [],
+      playbackIndex: 0,
+      gapTimerId: null,
+      requestToken: 0
+    };
     var ICONS = {
       speaker: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18 6a8.5 8.5 0 0 1 0 12"></path></svg>',
       stop: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect></svg>',
@@ -1725,6 +1739,7 @@
     var AUTO_MERGE_FOLLOWUP_MAX_WORDS = 10;
     var AUTO_MERGE_COMBINED_MAX_CHARS = 68;
     var AUTO_MERGE_COMBINED_MAX_WORDS = 18;
+    var TOPIC_RECORDING_GAP_MS = 350;
     var KEYWORD_STOPWORDS = {
       "은": true, "는": true, "이": true, "가": true, "을": true, "를": true,
       "에": true, "에서": true, "에게": true, "께": true, "의": true, "도": true,
@@ -2902,6 +2917,7 @@
       if (!state.active) elements.restartButton.disabled = n === 0;
       updateStartButtonCopy();
       updatePhoneShareButtons();
+      updateTopicRecordingButtons();
     }
     function getRestorableTopicPracticeSession(topic, sourceSentences) {
       var session = normalizeStoredPracticeSession(topic && topic.practiceSession);
@@ -2944,6 +2960,7 @@
       elements.sourceSection.hidden = false;
       elements.sourceTrigger.hidden = true;
       updateStartButtonCopy();
+      updateTopicRecordingButtons();
       requestAnimationFrame(function() {
         elements.sourceSection.scrollIntoView({ behavior: "smooth", block: "start" });
         if (elements.topicTitleInput) elements.topicTitleInput.focus();
@@ -3126,8 +3143,7 @@
       var stamp = new Date().toISOString().replace(/[:.]/g, "-");
       return "nonsul-practice-backup-" + stamp + ".json";
     }
-    function downloadBackupJson(filename, text) {
-      var blob = new Blob([text], { type: "application/json" });
+    function downloadBlobFile(filename, blob) {
       var url = URL.createObjectURL(blob);
       var link = document.createElement("a");
       link.href = url;
@@ -3136,6 +3152,10 @@
       link.click();
       document.body.removeChild(link);
       setTimeout(function() { URL.revokeObjectURL(url); }, 0);
+    }
+    function downloadBackupJson(filename, text) {
+      var blob = new Blob([text], { type: "application/json" });
+      downloadBlobFile(filename, blob);
     }
     function exportStudyBackup() {
       saveSourceDraft();
@@ -3291,6 +3311,7 @@
     }
     function selectTopic(topicId, announce) {
       if (!topicId || topicId === state.selectedTopicId) return;
+      stopTopicRecordingPlayback();
       saveSourceDraft();
       state.selectedTopicId = topicId;
       persistTopicLibrary();
@@ -3322,6 +3343,7 @@
       elements.topicSelect.value = topic.id;
     }
     function createNewTopic() {
+      stopTopicRecordingPlayback();
       saveSourceDraft();
       var topic = createTopicRecord({
         title: getNextTopicDefaultTitle(state.topics),
@@ -3339,6 +3361,7 @@
       var topic = ensureSelectedTopic();
       if (!topic) return;
       if (!confirm('"' + topic.title + '" 주제를 삭제할까요? 저장된 모범 답안과 문장 편집 내용이 함께 지워집니다.')) return;
+      stopTopicRecordingPlayback();
       var index = getSelectedTopicIndex();
       if (index === -1) return;
       state.topics.splice(index, 1);
@@ -3354,6 +3377,7 @@
     function resetPracticeStateToIdle() {
       finishSentenceRecording("auto");
       stopSentencePlayback();
+      stopTopicRecordingPlayback();
       stopSpeaking();
       stopTimer();
       hideCelebration();
@@ -3539,6 +3563,7 @@
       if (session.currentIndex >= currentQueue.length) return false;
       finishSentenceRecording("auto");
       stopSentencePlayback();
+      stopTopicRecordingPlayback();
       stopSpeaking();
       stopTimer();
       hideCelebration();
@@ -3590,6 +3615,7 @@
       if (!topicId || topicId === state.selectedTopicId) return;
       finishSentenceRecording("auto");
       stopSentencePlayback();
+      stopTopicRecordingPlayback();
       stopSpeaking();
       saveSelectedTopicPracticeSession(false);
       state.selectedTopicId = topicId;
@@ -3840,6 +3866,392 @@
       if (recordingState.storageError) return recordingState.storageError;
       return "";
     }
+    function getTopicRecordingSupportMessage() {
+      if (!recordingState.storageSupported) return "현재 브라우저에서는 로컬 음성 저장을 사용할 수 없습니다.";
+      if (recordingState.storageError) return recordingState.storageError;
+      return "";
+    }
+    function getTopicRecordingExportSupportMessage() {
+      var base = getTopicRecordingSupportMessage();
+      if (base) return base;
+      if (!(typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext))) {
+        return "현재 브라우저에서는 주제 녹음 WAV 내보내기를 사용할 수 없습니다.";
+      }
+      return "";
+    }
+    function getTopicSourceConfig(topic) {
+      if (!topic || topic.id !== state.selectedTopicId) return null;
+      return {
+        sourceText: elements.sourceText ? elements.sourceText.value || "" : topic.sourceText,
+        manualSourceSentences: state.manualSourceSentences
+      };
+    }
+    function createTopicSentenceRecordsForAudio(topic) {
+      return getTopicSentenceTexts(topic, getTopicSourceConfig(topic)).map(function(text, index) {
+        return { id: index + 1, text: text };
+      });
+    }
+    function isTopicRecordingPlaybackActive(topicId) {
+      if (!topicId || topicAudioState.playbackTopicId !== topicId) return false;
+      return !!(topicAudioState.playbackAudio || topicAudioState.gapTimerId || topicAudioState.playbackQueue.length);
+    }
+    function clearTopicPlaybackAudio(skipUpdate) {
+      var audio = topicAudioState.playbackAudio;
+      if (audio) {
+        audio.onended = null;
+        audio.onerror = null;
+        audio.pause();
+        audio.removeAttribute("src");
+        try { audio.load(); } catch (e) {}
+      }
+      topicAudioState.playbackAudio = null;
+      if (topicAudioState.playbackUrl) URL.revokeObjectURL(topicAudioState.playbackUrl);
+      topicAudioState.playbackUrl = "";
+      if (!skipUpdate) updateTopicRecordingButtons();
+    }
+    function stopTopicRecordingPlayback(skipUpdate) {
+      topicAudioState.requestToken += 1;
+      if (topicAudioState.gapTimerId) {
+        clearTimeout(topicAudioState.gapTimerId);
+        topicAudioState.gapTimerId = null;
+      }
+      clearTopicPlaybackAudio(true);
+      topicAudioState.playbackLoading = false;
+      topicAudioState.playbackQueue = [];
+      topicAudioState.playbackIndex = 0;
+      topicAudioState.playbackTopicId = "";
+      if (!skipUpdate) updateTopicRecordingButtons();
+    }
+    function loadTopicRecordingEntries(topic) {
+      var sentences = createTopicSentenceRecordsForAudio(topic);
+      if (!topic || !sentences.length) {
+        return Promise.resolve({ topic: topic, entries: [], recordingCount: 0, totalDurationMs: 0 });
+      }
+      return Promise.all(sentences.map(function(sentence) {
+        var storageKey = getSentenceRecordingStorageKey(sentence);
+        return readSentenceRecording(storageKey).then(function(record) {
+          if (!record || !record.blob) return null;
+          return {
+            storageKey: storageKey,
+            sentence: sentence,
+            blob: record.blob,
+            mimeType: record.mimeType || (record.blob && record.blob.type) || "",
+            durationMs: record.durationMs || 0
+          };
+        });
+      })).then(function(results) {
+        var entries = results.filter(Boolean);
+        var totalDurationMs = entries.reduce(function(sum, entry) {
+          return sum + Math.max(0, entry.durationMs || 0);
+        }, 0);
+        if (entries.length > 1) totalDurationMs += TOPIC_RECORDING_GAP_MS * (entries.length - 1);
+        return {
+          topic: topic,
+          entries: entries,
+          recordingCount: entries.length,
+          totalDurationMs: totalDurationMs
+        };
+      });
+    }
+    function createTopicRecordingFileName(topic) {
+      var title = normalizeTopicTitleValue(topic && topic.title || "topic") || "topic";
+      var safe = title.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "").replace(/\s+/g, "-");
+      return (safe || "topic") + "-recordings.wav";
+    }
+    function getTopicRecordingPlayButtonTitle(topic, disabledReason, isPlaying) {
+      if (disabledReason) return disabledReason;
+      if (!topic) return "먼저 주제를 선택해 주세요.";
+      return isPlaying ? "현재 주제 이어듣기 멈추기" : "녹음된 문장만 순서대로 이어듣기";
+    }
+    function getTopicRecordingExportButtonTitle(topic, disabledReason) {
+      if (disabledReason) return disabledReason;
+      if (!topic) return "먼저 주제를 선택해 주세요.";
+      return "녹음된 문장을 하나의 WAV 파일로 저장";
+    }
+    function updateTopicRecordingButtons() {
+      var playButton = elements.playTopicRecordingsButton;
+      var exportButton = elements.exportTopicRecordingsButton;
+      if (!playButton || !exportButton) return;
+      var topic = getSelectedTopic();
+      var hasSource = !!createTopicSentenceRecordsForAudio(topic).length;
+      var playbackSupportMessage = getTopicRecordingSupportMessage();
+      var exportSupportMessage = getTopicRecordingExportSupportMessage();
+      var isPlaying = !!(topic && isTopicRecordingPlaybackActive(topic.id));
+      var isBusy = recordingState.isRecording || recordingState.loading;
+      var playbackDisabledReason = !hasSource
+        ? "먼저 이 주제의 모범 답안을 입력해 주세요."
+        : playbackSupportMessage || (isBusy ? "문장 녹음 중이거나 녹음 정보를 준비하는 중입니다." : "") || (topicAudioState.playbackLoading ? "주제 녹음을 준비하는 중입니다." : "") || (topicAudioState.exportLoading ? "주제 WAV 파일을 준비하는 중입니다." : "");
+      var exportDisabledReason = !hasSource
+        ? "먼저 이 주제의 모범 답안을 입력해 주세요."
+        : exportSupportMessage || (isBusy ? "문장 녹음 중이거나 녹음 정보를 준비하는 중입니다." : "") || (isPlaying || topicAudioState.playbackLoading ? "이어듣기를 멈춘 뒤 WAV로 내보낼 수 있습니다." : "");
+
+      playButton.textContent = topicAudioState.playbackLoading ? "주제 녹음 준비 중..." : isPlaying ? "이어듣기 멈추기" : "주제 녹음 이어듣기";
+      playButton.disabled = !!playbackDisabledReason && !isPlaying;
+      playButton.title = getTopicRecordingPlayButtonTitle(topic, isPlaying ? "" : playbackDisabledReason, isPlaying);
+      playButton.setAttribute("aria-label", playButton.title);
+      playButton.setAttribute("aria-pressed", isPlaying ? "true" : "false");
+
+      exportButton.textContent = topicAudioState.exportLoading ? "WAV 준비 중..." : "주제 녹음 WAV 내보내기";
+      exportButton.disabled = !!exportDisabledReason || topicAudioState.exportLoading;
+      exportButton.title = getTopicRecordingExportButtonTitle(topic, exportDisabledReason);
+      exportButton.setAttribute("aria-label", exportButton.title);
+    }
+    function playNextTopicRecordingQueueItem() {
+      if (topicAudioState.gapTimerId) {
+        clearTimeout(topicAudioState.gapTimerId);
+        topicAudioState.gapTimerId = null;
+      }
+      clearTopicPlaybackAudio(true);
+      if (!topicAudioState.playbackQueue.length || topicAudioState.playbackIndex >= topicAudioState.playbackQueue.length) {
+        stopTopicRecordingPlayback();
+        setFeedback("주제 녹음을 모두 들었습니다.", "녹음된 문장을 순서대로 이어서 재생했습니다.", "", "success");
+        return;
+      }
+      var entry = topicAudioState.playbackQueue[topicAudioState.playbackIndex];
+      var url = URL.createObjectURL(entry.blob);
+      var audio = new Audio(url);
+      topicAudioState.playbackAudio = audio;
+      topicAudioState.playbackUrl = url;
+      audio.onended = function() {
+        clearTopicPlaybackAudio(true);
+        topicAudioState.playbackIndex += 1;
+        if (topicAudioState.playbackIndex >= topicAudioState.playbackQueue.length) {
+          stopTopicRecordingPlayback();
+          setFeedback("주제 녹음을 모두 들었습니다.", "녹음된 문장을 순서대로 이어서 재생했습니다.", "", "success");
+          return;
+        }
+        topicAudioState.gapTimerId = setTimeout(function() {
+          topicAudioState.gapTimerId = null;
+          playNextTopicRecordingQueueItem();
+        }, TOPIC_RECORDING_GAP_MS);
+        updateTopicRecordingButtons();
+      };
+      audio.onerror = function() {
+        stopTopicRecordingPlayback();
+        setFeedback("주제 녹음을 이어듣지 못했습니다.", "저장된 음성 중 일부를 브라우저가 열지 못했습니다.", "bad", "warning");
+      };
+      updateTopicRecordingButtons();
+      return audio.play().catch(function() {
+        stopTopicRecordingPlayback();
+        setFeedback("주제 녹음을 이어듣지 못했습니다.", "브라우저의 오디오 재생이 차단되었습니다.", "bad", "warning");
+      });
+    }
+    function toggleTopicRecordingsPlayback() {
+      var topic = getSelectedTopic();
+      if (!topic) return;
+      if (recordingState.isRecording) {
+        setFeedback("문장 녹음 중에는 이어듣기를 할 수 없습니다.", "먼저 현재 문장 녹음을 저장해 주세요.", "", "warning");
+        return;
+      }
+      if (recordingState.loading || topicAudioState.exportLoading) return;
+      if (isTopicRecordingPlaybackActive(topic.id)) {
+        stopTopicRecordingPlayback();
+        setFeedback("주제 이어듣기를 멈췄습니다.", "원할 때 다시 이어서 들을 수 있습니다.", "", "close");
+        return;
+      }
+      if (topicAudioState.playbackLoading) return;
+      if (getTopicRecordingSupportMessage()) {
+        setFeedback("주제 녹음을 불러올 수 없습니다.", getTopicRecordingSupportMessage(), "bad", "warning");
+        return;
+      }
+      if (!createTopicSentenceRecordsForAudio(topic).length) {
+        setFeedback("모범 답안이 없습니다.", "먼저 이 주제의 모범 답안을 입력해 주세요.", "", "warning");
+        return;
+      }
+      stopSpeaking();
+      stopSentencePlayback();
+      stopTopicRecordingPlayback(true);
+      topicAudioState.playbackLoading = true;
+      topicAudioState.requestToken += 1;
+      var token = topicAudioState.requestToken;
+      updateTopicRecordingButtons();
+      loadTopicRecordingEntries(topic).then(function(payload) {
+        if (token !== topicAudioState.requestToken) return;
+        topicAudioState.playbackLoading = false;
+        if (!payload.entries.length) {
+          updateTopicRecordingButtons();
+          setFeedback("이 주제에 저장된 녹음이 없습니다.", "녹음된 문장만 이어듣기에 포함됩니다.", "", "note");
+          return;
+        }
+        topicAudioState.playbackTopicId = topic.id;
+        topicAudioState.playbackQueue = payload.entries;
+        topicAudioState.playbackIndex = 0;
+        setFeedback(
+          "주제 녹음을 이어듣기 합니다.",
+          payload.recordingCount + "개 문장을 약 " + formatRecordingDuration(payload.totalDurationMs) + " 동안 순서대로 재생합니다.",
+          "",
+          "note"
+        );
+        playNextTopicRecordingQueueItem();
+      }).catch(function() {
+        if (token !== topicAudioState.requestToken) return;
+        topicAudioState.playbackLoading = false;
+        updateTopicRecordingButtons();
+        setFeedback("주제 녹음을 불러오지 못했습니다.", "브라우저 로컬 저장소에서 음성을 읽지 못했습니다.", "bad", "warning");
+      });
+    }
+    function getTopicAudioContextConstructor() {
+      if (typeof window === "undefined") return null;
+      return window.AudioContext || window.webkitAudioContext || null;
+    }
+    function decodeAudioBlobToBuffer(audioContext, blob) {
+      return blob.arrayBuffer().then(function(arrayBuffer) {
+        return new Promise(function(resolve, reject) {
+          var settled = false;
+          function once(fn) {
+            return function(value) {
+              if (settled) return;
+              settled = true;
+              fn(value);
+            };
+          }
+          var onResolve = once(resolve);
+          var onReject = once(reject);
+          try {
+            var maybePromise = audioContext.decodeAudioData(arrayBuffer.slice(0), onResolve, onReject);
+            if (maybePromise && typeof maybePromise.then === "function") {
+              maybePromise.then(onResolve, onReject);
+            }
+          } catch (error) {
+            onReject(error);
+          }
+        });
+      });
+    }
+    function encodeWavFromChannelData(channels, sampleRate) {
+      var channelCount = channels.length;
+      var frameCount = channels[0] ? channels[0].length : 0;
+      var bytesPerSample = 2;
+      var blockAlign = channelCount * bytesPerSample;
+      var buffer = new ArrayBuffer(44 + frameCount * blockAlign);
+      var view = new DataView(buffer);
+      function writeString(offset, value) {
+        for (var i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+      }
+      writeString(0, "RIFF");
+      view.setUint32(4, 36 + frameCount * blockAlign, true);
+      writeString(8, "WAVE");
+      writeString(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, channelCount, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bytesPerSample * 8, true);
+      writeString(36, "data");
+      view.setUint32(40, frameCount * blockAlign, true);
+      var offset = 44;
+      for (var frame = 0; frame < frameCount; frame++) {
+        for (var channel = 0; channel < channelCount; channel++) {
+          var sample = channels[channel][frame];
+          var clamped = Math.max(-1, Math.min(1, sample));
+          view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true);
+          offset += bytesPerSample;
+        }
+      }
+      return new Blob([buffer], { type: "audio/wav" });
+    }
+    function createTopicRecordingWavBlob(entries) {
+      var AudioContextCtor = getTopicAudioContextConstructor();
+      if (!AudioContextCtor) return Promise.reject(new Error("audio-context-unavailable"));
+      var audioContext;
+      try {
+        audioContext = new AudioContextCtor();
+      } catch (error) {
+        return Promise.reject(error);
+      }
+      return Promise.all(entries.map(function(entry) {
+        return decodeAudioBlobToBuffer(audioContext, entry.blob).then(function(buffer) {
+          return { entry: entry, buffer: buffer };
+        }).catch(function() {
+          return null;
+        });
+      })).then(function(results) {
+        var decoded = results.filter(Boolean);
+        if (!decoded.length) throw new Error("topic-recordings-decode-failed");
+        var gapSamples = Math.round(audioContext.sampleRate * (TOPIC_RECORDING_GAP_MS / 1000));
+        var channelCount = decoded.reduce(function(maxValue, item) {
+          return Math.max(maxValue, item.buffer.numberOfChannels || 1);
+        }, 1);
+        var totalSamples = decoded.reduce(function(sum, item) {
+          return sum + item.buffer.length;
+        }, 0);
+        if (decoded.length > 1) totalSamples += gapSamples * (decoded.length - 1);
+        var channels = [];
+        for (var channel = 0; channel < channelCount; channel++) channels.push(new Float32Array(totalSamples));
+        var offset = 0;
+        for (var i = 0; i < decoded.length; i++) {
+          var buffer = decoded[i].buffer;
+          for (var channelIndex = 0; channelIndex < channelCount; channelIndex++) {
+            var sourceChannel = buffer.getChannelData(Math.min(channelIndex, buffer.numberOfChannels - 1));
+            channels[channelIndex].set(sourceChannel, offset);
+          }
+          offset += buffer.length;
+          if (i < decoded.length - 1) offset += gapSamples;
+        }
+        return {
+          blob: encodeWavFromChannelData(channels, audioContext.sampleRate),
+          decodedCount: decoded.length
+        };
+      }).finally(function() {
+        if (audioContext && typeof audioContext.close === "function") {
+          try { audioContext.close(); } catch (e) {}
+        }
+      });
+    }
+    function exportTopicRecordings() {
+      var topic = getSelectedTopic();
+      if (!topic) return;
+      if (recordingState.isRecording) {
+        setFeedback("문장 녹음 중에는 내보낼 수 없습니다.", "먼저 현재 문장 녹음을 저장해 주세요.", "", "warning");
+        return;
+      }
+      if (recordingState.loading || topicAudioState.playbackLoading || topicAudioState.exportLoading) return;
+      var supportMessage = getTopicRecordingExportSupportMessage();
+      if (supportMessage) {
+        setFeedback("주제 녹음을 내보낼 수 없습니다.", supportMessage, "bad", "warning");
+        return;
+      }
+      if (!createTopicSentenceRecordsForAudio(topic).length) {
+        setFeedback("모범 답안이 없습니다.", "먼저 이 주제의 모범 답안을 입력해 주세요.", "", "warning");
+        return;
+      }
+      stopTopicRecordingPlayback();
+      stopSentencePlayback();
+      stopSpeaking();
+      topicAudioState.exportLoading = true;
+      updateTopicRecordingButtons();
+      setFeedback("주제 녹음을 WAV로 준비하는 중입니다.", "저장된 문장을 순서대로 이어 붙여 하나의 파일로 만듭니다.", "", "note");
+      loadTopicRecordingEntries(topic).then(function(payload) {
+        if (!payload.entries.length) {
+          setFeedback("이 주제에 저장된 녹음이 없습니다.", "녹음된 문장만 WAV 파일로 내보낼 수 있습니다.", "", "note");
+          return null;
+        }
+        return createTopicRecordingWavBlob(payload.entries).then(function(result) {
+          if (!result || !result.blob) throw new Error("topic-recordings-export-failed");
+          downloadBlobFile(createTopicRecordingFileName(topic), result.blob);
+          var message = payload.recordingCount + "개 문장을 하나의 WAV 파일로 저장했습니다.";
+          if (result.decodedCount < payload.recordingCount) {
+            message += " 다만 일부 녹음은 브라우저가 합치지 못해 제외했습니다.";
+          }
+          setFeedback("주제 녹음을 내보냈습니다.", message, "", "success");
+        });
+      }).catch(function(error) {
+        if (error && error.message === "topic-recordings-decode-failed") {
+          setFeedback("주제 녹음을 내보내지 못했습니다.", "브라우저가 저장된 음성을 WAV로 변환하지 못했습니다.", "bad", "warning");
+          return;
+        }
+        if (error && error.message === "topic-recordings-export-failed") {
+          setFeedback("주제 녹음을 내보내지 못했습니다.", "하나의 WAV 파일을 만드는 중 문제가 생겼습니다.", "bad", "warning");
+          return;
+        }
+        setFeedback("주제 녹음을 내보내지 못했습니다.", "브라우저 로컬 저장소에서 음성을 읽지 못했습니다.", "bad", "warning");
+      }).finally(function() {
+        topicAudioState.exportLoading = false;
+        updateTopicRecordingButtons();
+      });
+    }
     function updateSentenceRecordingButtons() {
       var recordBtn = elements.recordSentenceButton;
       var playBtn = elements.playSentenceRecordingButton;
@@ -4020,6 +4432,7 @@
       if (recordingState.loading) return;
       stopSpeaking();
       stopSentencePlayback();
+      stopTopicRecordingPlayback();
       recordingState.loading = true;
       updateSentenceRecordingButtons();
       openSentenceRecordingDb().then(function() {
@@ -4097,6 +4510,7 @@
           return;
         }
         stopSpeaking();
+        stopTopicRecordingPlayback();
         clearSentencePlaybackState(true);
         var url = URL.createObjectURL(record.blob);
         var audio = new Audio(url);
@@ -4211,6 +4625,7 @@
       speechState.activeUtterance = null;
       speechState.speaking = true;
       stopSentencePlayback();
+      stopTopicRecordingPlayback();
       updateReadButtonState();
       speechState.pendingTimer = setTimeout(function () {
         speechState.pendingTimer = null;
@@ -5006,6 +5421,7 @@
     function finishPractice(){
       finishSentenceRecording("auto");
       stopSentencePlayback();
+      stopTopicRecordingPlayback();
       stopSpeaking();
       state.active=false;stopTimer();
       elements.userInput.disabled=true;elements.checkButton.disabled=true;
@@ -5031,6 +5447,7 @@
       if(!sentences.length){alert("먼저 모범 답안을 붙여넣어 주세요.");return;}
       finishSentenceRecording("auto");
       stopSentencePlayback();
+      stopTopicRecordingPlayback();
       stopSpeaking();
       stopTimer();hideCelebration();
       state.sourceSentences=sentences.map(function(t,i){return{id:i+1,text:t}});
@@ -5262,6 +5679,8 @@
     elements.topicNewButton.addEventListener("click",createNewTopic);
     elements.topicDeleteButton.addEventListener("click",deleteSelectedTopic);
     elements.saveTopicButton.addEventListener("click",saveCurrentTopicManually);
+    elements.playTopicRecordingsButton.addEventListener("click",toggleTopicRecordingsPlayback);
+    elements.exportTopicRecordingsButton.addEventListener("click",exportTopicRecordings);
     elements.exportBackupButton.addEventListener("click",exportStudyBackup);
     elements.importBackupButton.addEventListener("click",promptBackupImport);
     elements.backupFileInput.addEventListener("change",handleBackupFileSelection);

@@ -4266,10 +4266,12 @@
       var hasRecording = !!(recordingState.currentMeta && recordingState.currentMeta.storageKey === currentKey);
       var isBusy = recordingState.loading;
 
-      recordBtn.innerHTML = isRecording ? (ICONS.stopRecord + "<span>저장</span>") : (ICONS.mic + "<span>" + (hasRecording ? "다시 녹음" : "녹음") + "</span>");
+      recordBtn.innerHTML = isRecording
+        ? (ICONS.stopRecord + '<span>저장 <span class="shortcut-hint">O</span></span>')
+        : (ICONS.mic + '<span>' + (hasRecording ? "다시 녹음" : "녹음") + ' <span class="shortcut-hint">O</span></span>');
       recordBtn.classList.toggle("is-recording", isRecording);
       recordBtn.disabled = !controlsVisible || !!supportMessage || isBusy;
-      recordBtn.title = supportMessage || (isRecording ? "녹음을 멈추고 저장" : "현재 문장 녹음");
+      recordBtn.title = supportMessage || (isRecording ? "녹음을 멈추고 저장 (O)" : "현재 문장 녹음 (O)");
       recordBtn.setAttribute("aria-label", recordBtn.title);
 
       playBtn.innerHTML = isPlaying ? ICONS.pause : ICONS.play;
@@ -5593,7 +5595,7 @@
       return (e.ctrlKey||e.metaKey)&&!e.altKey&&(e.code==="Slash"||e.key==="/");
     }
     function isPracticeShortcutKey(e){
-      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter"||e.code==="KeyR"||e.code==="KeyV"||e.code==="KeyA"||e.code==="KeyP";
+      return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter"||e.code==="KeyR"||e.code==="KeyV"||e.code==="KeyA"||e.code==="KeyP"||e.code==="KeyO";
     }
     function isPracticeOverlayOpen(){
       return !elements.sourceModal.hidden||!elements.celebrationOverlay.hidden;
@@ -5644,6 +5646,9 @@
       }
       if(e.key==="ArrowDown"||e.code==="KeyV"){
         speakCurrentSentence();return;
+      }
+      if(e.code==="KeyO"){
+        toggleSentenceRecording();return;
       }
       if(e.key==="ArrowRight"){
         skipCurrentSentence();return;

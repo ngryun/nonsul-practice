@@ -1181,8 +1181,11 @@
       <div class="button-row">
         <button id="startButton" class="button-primary">연습 시작</button>
         <button id="saveTopicButton" class="button-secondary" type="button">저장하기</button>
+        <button id="exportBackupButton" class="button-secondary" type="button">백업 내보내기</button>
+        <button id="importBackupButton" class="button-secondary" type="button">백업 불러오기</button>
         <button id="shareToPhoneButton" class="button-secondary" type="button">휴대폰으로 보내기</button>
       </div>
+      <input id="backupFileInput" type="file" accept="application/json,.json" hidden>
       <div class="meta-list">
         <div class="meta-item">
           <span>자동 분리 문장 수</span>
@@ -1585,6 +1588,8 @@
       topicSelect: $("topicSelect"), topicTitleInput: $("topicTitleInput"),
       topicNewButton: $("topicNewButton"), topicDeleteButton: $("topicDeleteButton"),
       saveTopicButton: $("saveTopicButton"),
+      exportBackupButton: $("exportBackupButton"), importBackupButton: $("importBackupButton"),
+      backupFileInput: $("backupFileInput"),
       practiceTopicSwitcher: $("practiceTopicSwitcher"), practiceTopicSelect: $("practiceTopicSelect"),
       topicManageButton: $("topicManageButton"),
       sourceTrigger: $("sourceTrigger"),
@@ -1702,6 +1707,7 @@
     var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
     var SOURCE_SENTENCE_LIST_KEY = "nonsul-practice/source-sentences";
     var TOPIC_LIBRARY_KEY = "nonsul-practice/topic-library";
+    var BACKUP_FILE_VERSION = 1;
     var PASS_THRESHOLD = 80;
     var READ_SPEED_KEY = "nonsul-practice/read-speed";
     var DEFAULT_SPEECH_RATE = 0.95;
@@ -2888,6 +2894,286 @@
         if (elements.topicTitleInput) elements.topicTitleInput.focus();
       });
       setFeedback("주제 관리로 이동했습니다.", "원하는 주제를 고르거나 모범 답안을 수정한 뒤 저장하거나 이어하기를 누르세요.", "", "note");
+    }
+    function normalizeImportedHeatmap(data) {
+      if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+      return data;
+    }
+    function normalizeImportedRecordingEntry(entry) {
+      if (!entry || typeof entry !== "object") return null;
+      if (typeof entry.storageKey !== "string" || !entry.storageKey) return null;
+      if (typeof entry.dataUrl !== "string" || !/^data:/i.test(entry.dataUrl)) return null;
+      return {
+        storageKey: entry.storageKey,
+        sentenceId: Number.isFinite(entry.sentenceId) ? entry.sentenceId : parseInt(entry.sentenceId, 10) || 0,
+        sentenceText: typeof entry.sentenceText === "string" ? entry.sentenceText : "",
+        mimeType: typeof entry.mimeType === "string" ? entry.mimeType : "",
+        durationMs: Number.isFinite(entry.durationMs) ? entry.durationMs : 0,
+        updatedAt: Number.isFinite(entry.updatedAt) ? entry.updatedAt : Date.now(),
+        dataUrl: entry.dataUrl
+      };
+    }
+    function normalizeImportedBackup(payload) {
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new Error("backup-format");
+      }
+      var topicSource = Array.isArray(payload.topics)
+        ? payload.topics
+        : payload.topicLibrary && Array.isArray(payload.topicLibrary.topics)
+          ? payload.topicLibrary.topics
+          : [];
+      var topics = [];
+      for (var i = 0; i < topicSource.length; i++) {
+        var normalizedTopic = normalizeStoredTopic(topicSource[i], i, topics);
+        if (normalizedTopic) topics.push(normalizedTopic);
+      }
+      if (!topics.length) topics = [createTopicRecord({ title: "주제 1", topicsContext: [] })];
+      var selectedTopicId = typeof payload.selectedTopicId === "string"
+        ? payload.selectedTopicId
+        : payload.topicLibrary && typeof payload.topicLibrary.selectedTopicId === "string"
+          ? payload.topicLibrary.selectedTopicId
+          : topics[0].id;
+      if (!topics.some(function(topic) { return topic.id === selectedTopicId; })) selectedTopicId = topics[0].id;
+      var recordingsSource = Array.isArray(payload.recordings) ? payload.recordings : [];
+      var recordings = recordingsSource.map(normalizeImportedRecordingEntry).filter(Boolean);
+      return {
+        topics: topics,
+        selectedTopicId: selectedTopicId,
+        heatmap: normalizeImportedHeatmap(payload.heatmap),
+        readSpeed: Number.isFinite(payload.readSpeed) ? payload.readSpeed : parseFloat(payload.readSpeed) || DEFAULT_SPEECH_RATE,
+        recordings: recordings
+      };
+    }
+    function setBackupButtonsBusy(isBusy) {
+      if (elements.exportBackupButton) elements.exportBackupButton.disabled = !!isBusy;
+      if (elements.importBackupButton) elements.importBackupButton.disabled = !!isBusy;
+    }
+    function blobToDataUrl(blob) {
+      return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() { resolve(String(reader.result || "")); };
+        reader.onerror = function() { reject(reader.error || new Error("file-read-failed")); };
+        reader.readAsDataURL(blob);
+      });
+    }
+    function readTextFile(file) {
+      if (file && typeof file.text === "function") return file.text();
+      return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() { resolve(String(reader.result || "")); };
+        reader.onerror = function() { reject(reader.error || new Error("file-read-failed")); };
+        reader.readAsText(file);
+      });
+    }
+    function dataUrlToBlob(dataUrl) {
+      return fetch(dataUrl).then(function(response) {
+        return response.blob();
+      });
+    }
+    function listAllSentenceRecordings() {
+      if (!recordingState.storageSupported) return Promise.resolve([]);
+      return openSentenceRecordingDb().then(function(db) {
+        return new Promise(function(resolve, reject) {
+          var tx = db.transaction(SENTENCE_RECORDING_STORE, "readonly");
+          var store = tx.objectStore(SENTENCE_RECORDING_STORE);
+          if (typeof store.getAll === "function") {
+            var request = store.getAll();
+            request.onsuccess = function() { resolve(Array.isArray(request.result) ? request.result : []); };
+            request.onerror = function() { reject(request.error || new Error("recording-list-failed")); };
+            return;
+          }
+          var items = [];
+          var cursorRequest = store.openCursor();
+          cursorRequest.onsuccess = function(event) {
+            var cursor = event.target.result;
+            if (!cursor) {
+              resolve(items);
+              return;
+            }
+            items.push(cursor.value);
+            cursor.continue();
+          };
+          cursorRequest.onerror = function() { reject(cursorRequest.error || new Error("recording-list-failed")); };
+        });
+      });
+    }
+    function clearAllSentenceRecordings() {
+      if (!recordingState.storageSupported) return Promise.resolve();
+      return openSentenceRecordingDb().then(function(db) {
+        return new Promise(function(resolve, reject) {
+          var tx = db.transaction(SENTENCE_RECORDING_STORE, "readwrite");
+          var store = tx.objectStore(SENTENCE_RECORDING_STORE);
+          var request = store.clear();
+          request.onsuccess = function() { resolve(); };
+          request.onerror = function() { reject(request.error || new Error("recording-clear-failed")); };
+        });
+      });
+    }
+    function exportSentenceRecordingsForBackup() {
+      if (!recordingState.storageSupported) return Promise.resolve([]);
+      return listAllSentenceRecordings().then(function(records) {
+        var tasks = records.map(function(record) {
+          if (!record || !record.storageKey || !record.blob) return Promise.resolve(null);
+          return blobToDataUrl(record.blob).then(function(dataUrl) {
+            return {
+              storageKey: record.storageKey,
+              sentenceId: record.sentenceId || 0,
+              sentenceText: record.sentenceText || "",
+              mimeType: record.mimeType || (record.blob && record.blob.type) || "",
+              durationMs: record.durationMs || 0,
+              updatedAt: record.updatedAt || 0,
+              dataUrl: dataUrl
+            };
+          });
+        });
+        return Promise.all(tasks).then(function(results) {
+          return results.filter(Boolean);
+        });
+      });
+    }
+    function importSentenceRecordingsFromBackup(recordings) {
+      if (!recordingState.storageSupported) return Promise.resolve(0);
+      var list = Array.isArray(recordings) ? recordings : [];
+      return clearAllSentenceRecordings().then(function() {
+        var chain = Promise.resolve();
+        var importedCount = 0;
+        for (var i = 0; i < list.length; i++) {
+          (function(entry) {
+            chain = chain.then(function() {
+              return dataUrlToBlob(entry.dataUrl).then(function(blob) {
+                return writeSentenceRecording({
+                  storageKey: entry.storageKey,
+                  sentenceId: entry.sentenceId || 0,
+                  sentenceText: entry.sentenceText || "",
+                  mimeType: entry.mimeType || blob.type || "",
+                  durationMs: entry.durationMs || 0,
+                  updatedAt: entry.updatedAt || Date.now(),
+                  blob: blob
+                });
+              }).then(function() {
+                importedCount += 1;
+              });
+            });
+          })(list[i]);
+        }
+        return chain.then(function() { return importedCount; });
+      });
+    }
+    function resetRecordingCaches() {
+      recordingState.lookupToken += 1;
+      recordingState.loading = false;
+      recordingState.currentStorageKey = "";
+      recordingState.currentMeta = null;
+      recordingState.metaByStorageKey = {};
+      recordingState.pendingMetaByStorageKey = {};
+    }
+    function createBackupFileName() {
+      var stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      return "nonsul-practice-backup-" + stamp + ".json";
+    }
+    function downloadBackupJson(filename, text) {
+      var blob = new Blob([text], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 0);
+    }
+    function exportStudyBackup() {
+      saveSourceDraft();
+      if (state.active) saveSelectedTopicPracticeSession(false);
+      setBackupButtonsBusy(true);
+      setFeedback("백업 파일을 준비하는 중입니다.", "주제와 진행 상황, 가능하면 녹음까지 함께 내보냅니다.", "", "note");
+      exportSentenceRecordingsForBackup().then(function(recordings) {
+        var payload = {
+          app: "nonsul-practice",
+          version: BACKUP_FILE_VERSION,
+          exportedAt: new Date().toISOString(),
+          topics: state.topics,
+          selectedTopicId: state.selectedTopicId,
+          heatmap: loadHeatmap(),
+          readSpeed: speechState.rate,
+          recordings: recordings
+        };
+        downloadBackupJson(createBackupFileName(), JSON.stringify(payload, null, 2));
+        setFeedback(
+          "백업 파일을 저장했습니다.",
+          recordings.length
+            ? "이 JSON 파일 하나로 주제, 진행 상황, 녹음까지 다른 컴퓨터에서 불러올 수 있습니다."
+            : "이 JSON 파일로 주제와 진행 상황을 다른 컴퓨터에서 불러올 수 있습니다.",
+          "",
+          "success"
+        );
+      }).catch(function() {
+        setFeedback("백업 파일을 만들지 못했습니다.", "브라우저가 로컬 데이터를 읽지 못했습니다. 다시 시도해 주세요.", "bad", "warning");
+      }).finally(function() {
+        setBackupButtonsBusy(false);
+      });
+    }
+    function applyImportedBackup(data) {
+      var imported = normalizeImportedBackup(data);
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
+      stopSpeaking();
+      hideSourceModal(true, true);
+      hideCelebration();
+      cancelScheduledTopicSessionSave();
+      setBackupButtonsBusy(true);
+      return importSentenceRecordingsFromBackup(imported.recordings).catch(function() {
+        return -1;
+      }).then(function(importedRecordingCount) {
+        state.topics = imported.topics;
+        state.selectedTopicId = imported.selectedTopicId;
+        persistTopicLibrary();
+        saveHeatmap(imported.heatmap);
+        setSpeechRate(imported.readSpeed);
+        saveSpeechRate();
+        applySelectedTopicToSource();
+        resetRecordingCaches();
+        resetPracticeStateToIdle();
+        rebuildKeywordStats();
+        renderHeatmapPanel();
+        refreshSourceMeta();
+        refreshSentenceActionButtons();
+        updateSentenceRecordingButtons();
+        var message = "주제와 진행 상황을 불러왔습니다.";
+        if (importedRecordingCount > 0) message += " 녹음 " + importedRecordingCount + "개도 함께 복원했습니다.";
+        else if (imported.recordings.length && !recordingState.storageSupported) message += " 다만 이 브라우저에서는 녹음 복원을 지원하지 않습니다.";
+        else if (imported.recordings.length && importedRecordingCount < 0) message += " 다만 이 브라우저에서는 녹음을 복원하지 못했습니다.";
+        setFeedback("백업을 불러왔습니다.", message, "", "success");
+      }).finally(function() {
+        setBackupButtonsBusy(false);
+      });
+    }
+    function promptBackupImport() {
+      if (!elements.backupFileInput) return;
+      elements.backupFileInput.value = "";
+      elements.backupFileInput.click();
+    }
+    function handleBackupFileSelection(event) {
+      var input = event.target;
+      var file = input && input.files && input.files[0];
+      if (!file) return;
+      if (!confirm("현재 브라우저에 저장된 주제, 진행 상황, 녹음을 이 백업 파일로 바꿀까요?")) {
+        input.value = "";
+        return;
+      }
+      setBackupButtonsBusy(true);
+      readTextFile(file).then(function(text) {
+        var parsed = JSON.parse(text);
+        return applyImportedBackup(parsed);
+      }).catch(function(error) {
+        var message = (error && error.message === "backup-format")
+          ? "지원하지 않는 백업 파일 형식입니다."
+          : "백업 파일을 읽지 못했습니다. JSON 파일인지 확인해 주세요.";
+        setFeedback("백업을 불러오지 못했습니다.", message, "bad", "warning");
+      }).finally(function() {
+        input.value = "";
+        setBackupButtonsBusy(false);
+      });
     }
     function cancelScheduledTopicSessionSave() {
       if (!topicSessionSaveFrameId) return;
@@ -4920,6 +5206,9 @@
     elements.topicNewButton.addEventListener("click",createNewTopic);
     elements.topicDeleteButton.addEventListener("click",deleteSelectedTopic);
     elements.saveTopicButton.addEventListener("click",saveCurrentTopicManually);
+    elements.exportBackupButton.addEventListener("click",exportStudyBackup);
+    elements.importBackupButton.addEventListener("click",promptBackupImport);
+    elements.backupFileInput.addEventListener("change",handleBackupFileSelection);
     elements.topicManageButton.addEventListener("click",openTopicManager);
     elements.sourceText.addEventListener("input",function(){state.manualSourceSentences=null;saveSourceDraft();refreshSourceMeta();});
     elements.startButton.addEventListener("click",startSelectedTopicPractice);

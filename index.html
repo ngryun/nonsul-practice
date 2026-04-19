@@ -4543,6 +4543,56 @@
       if (!state.active || !current || !current.text) return;
       toggleSentenceRecordingPlaybackByStorageKey(getSentenceRecordingStorageKey(current), "먼저 이 문장을 녹음해 주세요.");
     }
+    function playPreferredSentenceAudio() {
+      var current = getCurrentSentence();
+      if (!state.active || !current || !current.text) return;
+      var storageKey = getSentenceRecordingStorageKey(current);
+      if (!storageKey || !recordingState.storageSupported) {
+        speakCurrentSentence();
+        return;
+      }
+      if (isCurrentSentencePlaybackActive()) {
+        stopSentencePlayback();
+        return;
+      }
+      var currentMeta = recordingState.currentMeta && recordingState.currentMeta.storageKey === storageKey
+        ? recordingState.currentMeta
+        : undefined;
+      if (currentMeta) {
+        toggleSentenceRecordingPlaybackByStorageKey(storageKey, "먼저 이 문장을 녹음해 주세요.");
+        return;
+      }
+      if (currentMeta === null) {
+        speakCurrentSentence();
+        return;
+      }
+      var cachedMeta = getCachedSentenceRecordingMeta(storageKey);
+      if (cachedMeta) {
+        toggleSentenceRecordingPlaybackByStorageKey(storageKey, "먼저 이 문장을 녹음해 주세요.");
+        return;
+      }
+      if (cachedMeta === null) {
+        speakCurrentSentence();
+        return;
+      }
+      if (recordingState.loading) {
+        speakCurrentSentence();
+        return;
+      }
+      readSentenceRecording(storageKey).then(function(record) {
+        if (getCurrentSentenceRecordingStorageKey() !== storageKey) return;
+        if (record && record.storageKey) {
+          cacheSentenceRecordingMeta(storageKey, record);
+          toggleSentenceRecordingPlaybackByStorageKey(storageKey, "먼저 이 문장을 녹음해 주세요.");
+          return;
+        }
+        cacheSentenceRecordingMeta(storageKey, null);
+        if (!isCurrentSentencePlaybackActive()) speakCurrentSentence();
+      }).catch(function() {
+        if (getCurrentSentenceRecordingStorageKey() !== storageKey) return;
+        if (!isCurrentSentencePlaybackActive()) speakCurrentSentence();
+      });
+    }
     function playHistorySentenceRecording(storageKey) {
       if (!storageKey) return;
       toggleSentenceRecordingPlaybackByStorageKey(storageKey, "이전 문장에는 저장된 녹음이 없습니다.");
@@ -5644,8 +5694,11 @@
       if(e.key==="ArrowLeft"){
         moveToPreviousSentence();return;
       }
-      if(e.key==="ArrowDown"||e.code==="KeyV"){
+      if(e.key==="ArrowDown"){
         speakCurrentSentence();return;
+      }
+      if(e.code==="KeyV"){
+        playPreferredSentenceAudio();return;
       }
       if(e.code==="KeyO"){
         toggleSentenceRecording();return;

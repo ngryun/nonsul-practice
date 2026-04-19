@@ -106,6 +106,66 @@
     .source-section .panel-copy {
       margin: 0 0 16px; color: var(--muted); font-size: 0.92rem; line-height: 1.6;
     }
+    .topic-manager {
+      margin-bottom: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--soft);
+      display: grid;
+      gap: 10px;
+    }
+    .topic-manager-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .topic-field {
+      flex: 1 1 220px;
+      min-width: 0;
+    }
+    .topic-field label {
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .topic-input,
+    .topic-select {
+      width: 100%;
+      min-height: 40px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .topic-input:focus,
+    .topic-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .topic-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .topic-actions button {
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .topic-manager-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
 
     /* Source modal overlay */
     .source-modal {
@@ -540,6 +600,53 @@
     .practice-strip-stats {
       display: flex; flex-wrap: wrap; gap: 8px;
       min-width: 0;
+    }
+    .practice-topic-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: min(250px, 44vw);
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+    .practice-topic-switcher[hidden] { display: none; }
+    .practice-topic-label {
+      flex-shrink: 0;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .practice-topic-select {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.84rem;
+      font-weight: 700;
+      padding: 0 18px 0 0;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position:
+        calc(100% - 12px) 48%,
+        calc(100% - 7px) 48%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+      cursor: pointer;
+    }
+    .practice-topic-select:focus { outline: none; }
+    .practice-topic-select:disabled {
+      cursor: default;
+      opacity: 0.5;
     }
     .practice-stat {
       display: inline-flex; align-items: center; gap: 6px;
@@ -997,6 +1104,11 @@
       .practice-strip-top { align-items: flex-start; }
       .practice-strip-stats { width: 100%; }
       .practice-stat { flex: 1 1 calc(50% - 4px); justify-content: space-between; }
+      .practice-topic-switcher {
+        width: 100%;
+        min-width: 0;
+        order: -1;
+      }
       .practice-strip-actions { margin-left: auto; }
       .source-trigger,
       .strip-icon-button { width: 38px; min-width: 38px; height: 38px; }
@@ -1044,11 +1156,31 @@
     <section class="source-section" id="sourceSection">
       <h2>모범 답안</h2>
       <p class="panel-copy">답안을 그대로 붙여넣고 시작하세요. 마침표, 물음표, 느낌표, 줄바꿈을 기준으로 문장을 나눕니다.</p>
+      <div class="topic-manager">
+        <div class="topic-manager-row">
+          <div class="topic-field">
+            <label for="topicSelect">저장된 주제</label>
+            <select id="topicSelect" class="topic-select" aria-label="저장된 주제 선택"></select>
+          </div>
+          <div class="topic-actions">
+            <button id="topicNewButton" class="button-secondary" type="button">새 주제</button>
+            <button id="topicDeleteButton" class="button-secondary" type="button">삭제</button>
+          </div>
+        </div>
+        <div class="topic-manager-row">
+          <div class="topic-field">
+            <label for="topicTitleInput">주제명</label>
+            <input id="topicTitleInput" class="topic-input" type="text" maxlength="80" placeholder="예: 교육격차 / AI 윤리 / 사회복지">
+          </div>
+        </div>
+        <p class="topic-manager-note">선택한 주제의 모범 답안과 문장 편집 내용은 이 브라우저에 자동 저장됩니다.</p>
+      </div>
       <label for="sourceText">모범 답안</label>
       <textarea id="sourceText" placeholder="여기에 모범 답안을 붙여넣으세요.&#10;&#10;예) 국가는 개인의 자유를 보장해야 한다.&#10;그러나 자유는 공동체의 책임과 분리될 수 없다."></textarea>
       <p class="inline-note">구두점(마침표, 쉼표 등)은 채점에서 제외되며, 입력한 모범 답안은 이 브라우저에 자동 저장됩니다.</p>
       <div class="button-row">
         <button id="startButton" class="button-primary">연습 시작</button>
+        <button id="saveTopicButton" class="button-secondary" type="button">저장하기</button>
         <button id="shareToPhoneButton" class="button-secondary" type="button">휴대폰으로 보내기</button>
       </div>
       <div class="meta-list">
@@ -1092,6 +1224,11 @@
             <span class="practice-stat">완료 <strong id="progressDone">0 / 0</strong></span>
           </div>
           <div class="practice-strip-actions">
+            <div id="practiceTopicSwitcher" class="practice-topic-switcher" hidden>
+              <span class="practice-topic-label">주제</span>
+              <select id="practiceTopicSelect" class="practice-topic-select" aria-label="연습 중 주제 전환"></select>
+            </div>
+            <button id="topicManageButton" class="button-secondary history-toggle-button" type="button" hidden>주제 관리</button>
             <button id="sourceTrigger" class="source-trigger" type="button" hidden aria-label="모범 답안 보기" title="모범 답안 보기">
               <span class="source-trigger-icon">&#128196;</span>
               <span class="sr-only">모범 답안 보기</span>
@@ -1445,6 +1582,11 @@
     var $ = function(id) { return document.getElementById(id); };
     var elements = {
       sourceText: $("sourceText"), sourceSection: $("sourceSection"),
+      topicSelect: $("topicSelect"), topicTitleInput: $("topicTitleInput"),
+      topicNewButton: $("topicNewButton"), topicDeleteButton: $("topicDeleteButton"),
+      saveTopicButton: $("saveTopicButton"),
+      practiceTopicSwitcher: $("practiceTopicSwitcher"), practiceTopicSelect: $("practiceTopicSelect"),
+      topicManageButton: $("topicManageButton"),
       sourceTrigger: $("sourceTrigger"),
       sourceModal: $("sourceModal"), sourceModalCopy: $("sourceModalCopy"), sourceModalClose: $("sourceModalClose"),
       sourceModalNote: $("sourceModalNote"), sourceModalEditor: $("sourceModalEditor"),
@@ -1493,6 +1635,7 @@
       totalAttempts: 0, correctAttempts: 0, wrongAttempts: 0,
       solvedIds: new Set(), startedAt: null, timerId: null,
       committedHistory: [], historyAcceptedCounter: 0,
+      topics: [], selectedTopicId: "",
       manualSourceSentences: null,
       sourceModalSentences: [], sourceModalDirty: false,
       enterAdvanceLocked: false,
@@ -1504,7 +1647,9 @@
       difficultyMap: {}, similarityLog: [],
       currentStage: "full", clozeData: null, currentClozeMode: null, clozePassedForCurrent: false,
       keywordStats: null,
-      gradedAt: 0
+      gradedAt: 0,
+      lastFeedback: { title: "", text: "", tone: "", icon: "note" },
+      compareState: { visible: false, expected: "", actual: "" }
     };
     var speechState = {
       supported: typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined",
@@ -1556,6 +1701,7 @@
     };
     var SOURCE_DRAFT_KEY = "nonsul-practice/source-draft";
     var SOURCE_SENTENCE_LIST_KEY = "nonsul-practice/source-sentences";
+    var TOPIC_LIBRARY_KEY = "nonsul-practice/topic-library";
     var PASS_THRESHOLD = 80;
     var READ_SPEED_KEY = "nonsul-practice/read-speed";
     var DEFAULT_SPEECH_RATE = 0.95;
@@ -1603,6 +1749,7 @@
     var sourceModalHideTimerId = null;
     var historyPanelMeasureId = null;
     var historyPanelResizeObserver = null;
+    var topicSessionSaveFrameId = null;
 
     function hashText(s) {
       var h = 5381;
@@ -1707,36 +1854,407 @@
       }
       return merged;
     }
+    function normalizeTopicTitleValue(value) {
+      return String(value || "").replace(/\s+/g, " ").trim();
+    }
+    function getNextTopicDefaultTitle(topics) {
+      var list = Array.isArray(topics) ? topics : state.topics;
+      var used = {};
+      for (var i = 0; i < list.length; i++) {
+        var title = normalizeTopicTitleValue(list[i] && list[i].title);
+        var match = title.match(/^주제\s+(\d+)$/);
+        if (match) used[parseInt(match[1], 10)] = true;
+      }
+      var next = 1;
+      while (used[next]) next++;
+      return "주제 " + String(next);
+    }
+    function createTopicId() {
+      return "topic-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    }
     function getManualSourceText(sentences) {
       return (sentences || []).map(normalizeSourceSentenceValue).filter(Boolean).join("\n");
     }
-    function saveManualSourceSentences(sentences) {
+    function getManualSourceSentenceSignature(sentences) {
+      return (sentences || []).map(normalizeSourceSentenceValue).filter(Boolean).join("\u241E");
+    }
+    function sanitizeManualSourceSentences(sentences) {
       var cleaned = (sentences || []).map(normalizeSourceSentenceValue).filter(Boolean);
-      state.manualSourceSentences = cleaned.length ? cleaned : null;
+      return cleaned.length ? cleaned : null;
+    }
+    function normalizeIdList(list) {
+      if (!Array.isArray(list)) return [];
+      return list.map(function(value) {
+        var id = parseInt(value, 10);
+        return Number.isFinite(id) && id > 0 ? id : null;
+      }).filter(function(value) { return value !== null; });
+    }
+    function normalizeSimilarityLog(list) {
+      if (!Array.isArray(list)) return [];
+      return list.map(function(value) {
+        var num = Number(value);
+        return Number.isFinite(num) ? num : null;
+      }).filter(function(value) { return value !== null; });
+    }
+    function normalizeCommittedHistory(entries) {
+      if (!Array.isArray(entries)) return [];
+      var normalized = [];
+      for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        var sentenceId = parseInt(entry && entry.sentenceId, 10);
+        if (!Number.isFinite(sentenceId) || sentenceId <= 0) continue;
+        var text = normalizeForCompare(entry && entry.text || "");
+        if (!text) continue;
+        var acceptedAtOrder = Number.isFinite(entry && entry.acceptedAtOrder) ? Math.max(1, Math.floor(entry.acceptedAtOrder)) : normalized.length + 1;
+        normalized.push({
+          sentenceId: sentenceId,
+          text: text,
+          acceptedAtOrder: acceptedAtOrder
+        });
+      }
+      return normalized;
+    }
+    function normalizeStoredSentenceHighlights(highlights) {
+      var normalized = {};
+      if (!highlights || typeof highlights !== "object") return normalized;
+      for (var key in highlights) {
+        if (!Object.prototype.hasOwnProperty.call(highlights, key)) continue;
+        var source = highlights[key];
+        var indices = [];
+        if (Array.isArray(source)) {
+          for (var i = 0; i < source.length; i++) {
+            var arrayIndex = parseInt(source[i], 10);
+            if (Number.isFinite(arrayIndex) && arrayIndex >= 0) indices.push(arrayIndex);
+          }
+        } else if (source && typeof source === "object") {
+          for (var index in source) {
+            if (!Object.prototype.hasOwnProperty.call(source, index) || !source[index]) continue;
+            var objectIndex = parseInt(index, 10);
+            if (Number.isFinite(objectIndex) && objectIndex >= 0) indices.push(objectIndex);
+          }
+        }
+        indices.sort(function(a, b) { return a - b; });
+        if (indices.length) normalized[key] = indices;
+      }
+      return normalized;
+    }
+    function normalizeStoredDifficultyMap(value) {
+      var normalized = {};
+      if (!value || typeof value !== "object") return normalized;
+      for (var key in value) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        if (value[key] === "hard") normalized[key] = "hard";
+      }
+      return normalized;
+    }
+    function normalizeStoredFeedback(feedback) {
+      if (!feedback || typeof feedback !== "object") return null;
+      var title = String(feedback.title || "").trim();
+      var text = String(feedback.text || "").trim();
+      var tone = String(feedback.tone || "").trim();
+      var icon = String(feedback.icon || "").trim();
+      if (!title && !text) return null;
+      return { title: title, text: text, tone: tone, icon: icon || "note" };
+    }
+    function normalizeStoredCompareState(compare) {
+      if (!compare || typeof compare !== "object") return { visible: false, expected: "", actual: "" };
+      return {
+        visible: !!compare.visible,
+        expected: String(compare.expected || ""),
+        actual: String(compare.actual || "")
+      };
+    }
+    function normalizeStoredPracticeSession(session) {
+      if (!session || typeof session !== "object") return null;
+      var normalized = {
+        version: 1,
+        sourceSignature: typeof session.sourceSignature === "string" ? session.sourceSignature : "",
+        currentQueueIds: normalizeIdList(session.currentQueueIds),
+        retryQueueIds: normalizeIdList(session.retryQueueIds),
+        currentIndex: Number.isFinite(session.currentIndex) ? Math.max(0, Math.floor(session.currentIndex)) : 0,
+        round: Number.isFinite(session.round) ? Math.max(1, Math.floor(session.round)) : 1,
+        totalAttempts: Number.isFinite(session.totalAttempts) ? Math.max(0, Math.floor(session.totalAttempts)) : 0,
+        correctAttempts: Number.isFinite(session.correctAttempts) ? Math.max(0, Math.floor(session.correctAttempts)) : 0,
+        wrongAttempts: Number.isFinite(session.wrongAttempts) ? Math.max(0, Math.floor(session.wrongAttempts)) : 0,
+        solvedIds: normalizeIdList(session.solvedIds),
+        startedAt: Number.isFinite(session.startedAt) ? session.startedAt : Date.now(),
+        committedHistory: normalizeCommittedHistory(session.committedHistory),
+        historyAcceptedCounter: Number.isFinite(session.historyAcceptedCounter) ? Math.max(0, Math.floor(session.historyAcceptedCounter)) : 0,
+        historyCollapsed: !!session.historyCollapsed,
+        sentenceHighlights: normalizeStoredSentenceHighlights(session.sentenceHighlights),
+        waitingForNext: !!session.waitingForNext,
+        hintLevel: Number.isFinite(session.hintLevel) ? Math.max(0, Math.floor(session.hintLevel)) : 0,
+        difficultyMap: normalizeStoredDifficultyMap(session.difficultyMap),
+        similarityLog: normalizeSimilarityLog(session.similarityLog),
+        currentStage: session.currentStage === "cloze" ? "cloze" : "full",
+        currentClozeMode: session.currentClozeMode === "assist" || session.currentClozeMode === "review" ? session.currentClozeMode : null,
+        clozePassedForCurrent: !!session.clozePassedForCurrent,
+        gradedAt: Number.isFinite(session.gradedAt) ? session.gradedAt : 0,
+        viewMode: ["ready", "memorize", "cloze-entry", "cloze-reviewed", "reviewed"].indexOf(session.viewMode) >= 0 ? session.viewMode : "ready",
+        userInputValue: typeof session.userInputValue === "string" ? session.userInputValue : "",
+        clozeInputs: Array.isArray(session.clozeInputs) ? session.clozeInputs.map(function(value) { return typeof value === "string" ? value : ""; }) : [],
+        feedback: normalizeStoredFeedback(session.feedback),
+        compareState: normalizeStoredCompareState(session.compareState || session.compare)
+      };
+      if (!normalized.sourceSignature || !normalized.currentQueueIds.length) return null;
+      return normalized;
+    }
+    function getSourceSentenceSignature(sentences) {
+      return hashText((sentences || []).map(function(sentence) {
+        return normalizeSourceSentenceValue(sentence && typeof sentence === "object" ? sentence.text : sentence);
+      }).filter(Boolean).join("\n"));
+    }
+    function createSentenceRecordsFromText(text) {
+      var sentences = splitIntoSentences(text || "");
+      return sentences.map(function(sentence, index) {
+        return { id: index + 1, text: sentence };
+      });
+    }
+    function buildSentenceLookup(sentences) {
+      var lookup = {};
+      for (var i = 0; i < sentences.length; i++) lookup[sentences[i].id] = sentences[i];
+      return lookup;
+    }
+    function hydrateSentenceQueueByIds(ids, lookup) {
+      var hydrated = [];
+      for (var i = 0; i < ids.length; i++) {
+        var sentence = lookup[ids[i]];
+        if (!sentence) return null;
+        hydrated.push(sentence);
+      }
+      return hydrated;
+    }
+    function serializeSentenceHighlightsForSession() {
+      var serialized = {};
+      for (var key in state.sentenceHighlights) {
+        if (!Object.prototype.hasOwnProperty.call(state.sentenceHighlights, key)) continue;
+        var set = state.sentenceHighlights[key];
+        var indices = [];
+        for (var index in set) {
+          if (!Object.prototype.hasOwnProperty.call(set, index) || !set[index]) continue;
+          var parsed = parseInt(index, 10);
+          if (Number.isFinite(parsed) && parsed >= 0) indices.push(parsed);
+        }
+        indices.sort(function(a, b) { return a - b; });
+        if (indices.length) serialized[key] = indices;
+      }
+      return serialized;
+    }
+    function hydrateSentenceHighlightsFromSession(highlights) {
+      var hydrated = {};
+      var normalized = normalizeStoredSentenceHighlights(highlights);
+      for (var key in normalized) {
+        if (!Object.prototype.hasOwnProperty.call(normalized, key)) continue;
+        hydrated[key] = buildIndexSet(normalized[key]);
+      }
+      return hydrated;
+    }
+    function cloneDifficultyMapForSession() {
+      return normalizeStoredDifficultyMap(state.difficultyMap);
+    }
+    function cloneFeedbackForSession() {
+      return normalizeStoredFeedback(state.lastFeedback);
+    }
+    function cloneCompareStateForSession() {
+      return normalizeStoredCompareState(state.compareState);
+    }
+    function getCurrentPracticeViewMode() {
+      if (!state.active) return "ready";
+      if (state.currentStage === "cloze" && elements.sentenceCard.classList.contains("cloze-active")) {
+        return state.waitingForNext ? "cloze-reviewed" : "cloze-entry";
+      }
+      if (elements.sentenceCard.classList.contains("memorize")) return "memorize";
+      if (state.waitingForNext) return "reviewed";
+      return "ready";
+    }
+    function getCurrentClozeInputValues() {
+      return Array.from(getClozeInputs()).map(function(input) {
+        return input.value || "";
+      });
+    }
+    function serializeCurrentPracticeSession() {
+      if (!state.active || !state.sourceSentences.length || !state.currentQueue.length) return null;
+      return {
+        version: 1,
+        sourceSignature: getSourceSentenceSignature(state.sourceSentences),
+        currentQueueIds: state.currentQueue.map(function(sentence) { return sentence.id; }),
+        retryQueueIds: state.retryQueue.map(function(sentence) { return sentence.id; }),
+        currentIndex: state.currentIndex,
+        round: state.round,
+        totalAttempts: state.totalAttempts,
+        correctAttempts: state.correctAttempts,
+        wrongAttempts: state.wrongAttempts,
+        solvedIds: Array.from(state.solvedIds),
+        startedAt: state.startedAt || Date.now(),
+        committedHistory: normalizeCommittedHistory(state.committedHistory),
+        historyAcceptedCounter: state.historyAcceptedCounter,
+        historyCollapsed: state.historyCollapsed,
+        sentenceHighlights: serializeSentenceHighlightsForSession(),
+        waitingForNext: state.waitingForNext,
+        hintLevel: state.hintLevel,
+        difficultyMap: cloneDifficultyMapForSession(),
+        similarityLog: state.similarityLog.slice(),
+        currentStage: state.currentStage,
+        currentClozeMode: state.currentClozeMode,
+        clozePassedForCurrent: state.clozePassedForCurrent,
+        gradedAt: state.gradedAt,
+        viewMode: getCurrentPracticeViewMode(),
+        userInputValue: elements.userInput ? elements.userInput.value || "" : "",
+        clozeInputs: getCurrentClozeInputValues(),
+        feedback: cloneFeedbackForSession(),
+        compareState: cloneCompareStateForSession()
+      };
+    }
+    function createTopicRecord(options) {
+      var topicOptions = options || {};
+      var manualSourceSentences = sanitizeManualSourceSentences(topicOptions.manualSourceSentences || topicOptions.manualSentences);
+      var practiceSession = normalizeStoredPracticeSession(topicOptions.practiceSession || topicOptions.session);
+      return {
+        id: topicOptions.id || createTopicId(),
+        title: normalizeTopicTitleValue(topicOptions.title) || getNextTopicDefaultTitle(topicOptions.topicsContext),
+        sourceText: String(topicOptions.sourceText || ""),
+        manualSourceSentences: manualSourceSentences,
+        practiceSession: practiceSession,
+        updatedAt: Number.isFinite(topicOptions.updatedAt) ? topicOptions.updatedAt : Date.now()
+      };
+    }
+    function normalizeStoredTopic(topic, index, topicsContext) {
+      if (!topic || typeof topic !== "object") return null;
+      var normalized = createTopicRecord({
+        id: typeof topic.id === "string" && topic.id ? topic.id : "",
+        title: topic.title,
+        sourceText: typeof topic.sourceText === "string" ? topic.sourceText : "",
+        manualSourceSentences: topic.manualSourceSentences || topic.manualSentences,
+        practiceSession: topic.practiceSession || topic.session,
+        updatedAt: topic.updatedAt,
+        topicsContext: topicsContext
+      });
+      if (!normalized.title) normalized.title = "주제 " + String(index + 1);
+      if (normalized.manualSourceSentences &&
+        normalizeSourceText(normalized.sourceText) !== normalizeSourceText(getManualSourceText(normalized.manualSourceSentences))) {
+        normalized.manualSourceSentences = null;
+      }
+      return normalized;
+    }
+    function getSelectedTopicIndex() {
+      for (var i = 0; i < state.topics.length; i++) {
+        if (state.topics[i].id === state.selectedTopicId) return i;
+      }
+      return -1;
+    }
+    function getSelectedTopic() {
+      var index = getSelectedTopicIndex();
+      return index >= 0 ? state.topics[index] : null;
+    }
+    function persistTopicLibrary() {
       try {
-        if (cleaned.length) localStorage.setItem(SOURCE_SENTENCE_LIST_KEY, JSON.stringify(cleaned));
-        else localStorage.removeItem(SOURCE_SENTENCE_LIST_KEY);
+        localStorage.setItem(TOPIC_LIBRARY_KEY, JSON.stringify({
+          topics: state.topics,
+          selectedTopicId: state.selectedTopicId
+        }));
       } catch (e) {}
     }
-    function clearManualSourceSentences() {
-      state.manualSourceSentences = null;
-      try { localStorage.removeItem(SOURCE_SENTENCE_LIST_KEY); } catch (e) {}
+    function ensureSelectedTopic() {
+      if (!state.topics.length) {
+        state.topics = [createTopicRecord({ title: "주제 1", topicsContext: [] })];
+      }
+      if (getSelectedTopicIndex() === -1) state.selectedTopicId = state.topics[0].id;
+      return getSelectedTopic();
     }
-    function restoreManualSourceSentences() {
-      var restored = null;
+    function renderTopicSelector() {
+      if (!elements.topicSelect || !elements.practiceTopicSelect) return;
+      var selectedId = state.selectedTopicId;
+      var selects = [elements.topicSelect, elements.practiceTopicSelect];
+      for (var s = 0; s < selects.length; s++) selects[s].innerHTML = "";
+      for (var i = 0; i < state.topics.length; i++) {
+        for (var s2 = 0; s2 < selects.length; s2++) {
+          var option = document.createElement("option");
+          option.value = state.topics[i].id;
+          option.textContent = state.topics[i].title;
+          selects[s2].appendChild(option);
+        }
+      }
+      if (selectedId) {
+        elements.topicSelect.value = selectedId;
+        elements.practiceTopicSelect.value = selectedId;
+      }
+      elements.topicDeleteButton.disabled = state.topics.length === 0;
+      elements.practiceTopicSelect.disabled = state.topics.length <= 1;
+      updatePracticeTopicSwitcher();
+    }
+    function syncSelectedTopicFields() {
+      var topic = ensureSelectedTopic();
+      renderTopicSelector();
+      elements.topicTitleInput.value = topic ? topic.title : "";
+    }
+    function applySelectedTopicToSource() {
+      var topic = ensureSelectedTopic();
+      syncSelectedTopicFields();
+      elements.sourceText.value = topic && topic.sourceText ? topic.sourceText : "";
+      state.manualSourceSentences = topic && topic.manualSourceSentences ? topic.manualSourceSentences.slice() : null;
+      refreshSourceMeta();
+    }
+    function migrateLegacyTopics() {
+      var sourceText = "";
+      var manualSourceSentences = null;
+      try {
+        sourceText = localStorage.getItem(SOURCE_DRAFT_KEY) || "";
+      } catch (e) {}
       try {
         var raw = localStorage.getItem(SOURCE_SENTENCE_LIST_KEY);
         if (raw) {
           var parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) restored = parsed.map(normalizeSourceSentenceValue).filter(Boolean);
+          if (Array.isArray(parsed)) manualSourceSentences = sanitizeManualSourceSentences(parsed);
+        }
+      } catch (e2) {}
+      if (!sourceText && manualSourceSentences) sourceText = getManualSourceText(manualSourceSentences);
+      if (!sourceText && !manualSourceSentences) return [];
+      try {
+        localStorage.removeItem(SOURCE_DRAFT_KEY);
+        localStorage.removeItem(SOURCE_SENTENCE_LIST_KEY);
+      } catch (e3) {}
+      return [createTopicRecord({
+        title: "주제 1",
+        sourceText: sourceText,
+        manualSourceSentences: manualSourceSentences,
+        practiceSession: null,
+        topicsContext: []
+      })];
+    }
+    function loadTopicLibrary() {
+      var restoredTopics = [];
+      var selectedTopicId = "";
+      try {
+        var raw = localStorage.getItem(TOPIC_LIBRARY_KEY);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          var source = Array.isArray(parsed) ? parsed : parsed && Array.isArray(parsed.topics) ? parsed.topics : [];
+          for (var i = 0; i < source.length; i++) {
+            var normalized = normalizeStoredTopic(source[i], i, restoredTopics);
+            if (normalized) restoredTopics.push(normalized);
+          }
+          if (parsed && !Array.isArray(parsed) && typeof parsed.selectedTopicId === "string") selectedTopicId = parsed.selectedTopicId;
         }
       } catch (e) {}
-      if (!restored || !restored.length) {
-        state.manualSourceSentences = null;
-        return;
-      }
-      if (normalizeSourceText(elements.sourceText.value) === normalizeSourceText(getManualSourceText(restored))) state.manualSourceSentences = restored;
-      else clearManualSourceSentences();
+      if (!restoredTopics.length) restoredTopics = migrateLegacyTopics();
+      if (!restoredTopics.length) restoredTopics = [createTopicRecord({ title: "주제 1", topicsContext: [] })];
+      state.topics = restoredTopics;
+      state.selectedTopicId = restoredTopics.some(function(topic) { return topic.id === selectedTopicId; })
+        ? selectedTopicId
+        : restoredTopics[0].id;
+      persistTopicLibrary();
+    }
+    function saveManualSourceSentences(sentences) {
+      state.manualSourceSentences = sanitizeManualSourceSentences(sentences);
+      saveSourceDraft();
+    }
+    function clearManualSourceSentences() {
+      state.manualSourceSentences = null;
+      saveSourceDraft();
+    }
+    function restoreManualSourceSentences() {
+      var topic = getSelectedTopic();
+      state.manualSourceSentences = topic && topic.manualSourceSentences ? topic.manualSourceSentences.slice() : null;
     }
     function isKeywordCandidate(token) {
       if (!token) return false;
@@ -1802,6 +2320,32 @@
       }
       return { totalDocs: docs.length, docFreq: docFreq };
     }
+    function getTopicSentenceTexts(topic, options) {
+      if (!topic) return [];
+      var config = options || {};
+      var sourceText = config.sourceText !== undefined ? config.sourceText : topic.sourceText;
+      var manualSourceSentences = config.manualSourceSentences !== undefined ? config.manualSourceSentences : topic.manualSourceSentences;
+      return splitSourceTextIntoSentences(sourceText || "", manualSourceSentences);
+    }
+    function getGlobalKeywordDocuments() {
+      var docs = [];
+      for (var i = 0; i < state.topics.length; i++) {
+        var topic = state.topics[i];
+        var sentenceTexts = getTopicSentenceTexts(topic, topic.id === state.selectedTopicId ? {
+          sourceText: elements.sourceText ? elements.sourceText.value : topic.sourceText,
+          manualSourceSentences: state.manualSourceSentences
+        } : null);
+        for (var j = 0; j < sentenceTexts.length; j++) {
+          docs.push({ text: sentenceTexts[j] });
+        }
+      }
+      if (!docs.length && state.sourceSentences.length) return state.sourceSentences.slice();
+      return docs;
+    }
+    function rebuildKeywordStats() {
+      state.keywordStats = buildKeywordStats(getGlobalKeywordDocuments());
+      return state.keywordStats;
+    }
     function buildIndexSet(indices) {
       var set = {};
       for (var i = 0; i < indices.length; i++) set[indices[i]] = true;
@@ -1821,6 +2365,7 @@
       else set[displayIndex] = true;
       if (Object.keys(set).length) state.sentenceHighlights[key] = set;
       else delete state.sentenceHighlights[key];
+      scheduleSelectedTopicPracticeSessionSave();
     }
     function renderHistorySentenceHtml(text) {
       var info = splitSentenceTokens(text);
@@ -1859,6 +2404,7 @@
       if (isHard) state.difficultyMap[sentenceId] = "hard";
       else delete state.difficultyMap[sentenceId];
       refreshStats();
+      scheduleSelectedTopicPracticeSessionSave();
     }
     function toggleHistorySentenceHard(sentenceId) {
       if (!Number.isFinite(sentenceId)) return;
@@ -1880,7 +2426,7 @@
     function getSentenceKeywordIndices(text) {
       var info = splitSentenceTokens(text);
       var stats = state.keywordStats;
-      var totalDocs = stats && stats.totalDocs ? stats.totalDocs : Math.max(1, state.sourceSentences.length);
+      var totalDocs = stats && stats.totalDocs ? stats.totalDocs : Math.max(1, getGlobalKeywordDocuments().length || state.sourceSentences.length);
       var tf = {};
       var scored = [];
       for (var i = 0; i < info.grading.length; i++) {
@@ -2222,6 +2768,7 @@
       if (state.currentStage === "cloze") {
         resetCurrentSentenceForFullStage("같은 문장을 전체 받아쓰기로 바꿨습니다. 읽은 뒤 가리고 써보세요.");
         setFeedback("전체 받아쓰기로 전환했습니다.", "빈칸 결과와 상관없이 같은 문장을 전체로 이어서 연습할 수 있습니다.", "", "write");
+        scheduleSelectedTopicPracticeSessionSave();
         return;
       } else {
         var cur = state.currentQueue[state.currentIndex]; if (!cur) return;
@@ -2246,17 +2793,20 @@
       updateStageToggleButton();
     }
 
-    function splitIntoSentences(text) {
+    function splitSourceTextIntoSentences(text, manualSourceSentences) {
       var cleaned = text.replace(/\r\n/g,"\n").replace(/\u00a0/g," ").trim();
       if (!cleaned) return [];
-      if (state.manualSourceSentences && normalizeSourceText(cleaned) === normalizeSourceText(getManualSourceText(state.manualSourceSentences))) {
-        return state.manualSourceSentences.slice();
+      if (manualSourceSentences && normalizeSourceText(cleaned) === normalizeSourceText(getManualSourceText(manualSourceSentences))) {
+        return manualSourceSentences.slice();
       }
       return mergeShortSourceSentences(cleaned.split(/\n+/).map(function(l){return l.trim()}).filter(Boolean)
         .flatMap(function(line) {
           var m = line.match(/[^.!?。！？\n]+[.!?。！？…]?["'"')\]]*/g) || [];
           return m.map(function(s){return s.replace(/\s+/g," ").trim()}).filter(Boolean);
         }));
+    }
+    function splitIntoSentences(text) {
+      return splitSourceTextIntoSentences(text, state.manualSourceSentences);
     }
     function normalizeForCompare(t) { return t.replace(/\s+/g," ").trim(); }
     function normalizeForGrading(t) {
@@ -2289,20 +2839,427 @@
       elements.charCountWithoutSpaces.textContent = charsWithoutSpaces + "자";
       elements.startButton.disabled = n === 0;
       if (!state.active) elements.restartButton.disabled = n === 0;
+      updateStartButtonCopy();
       updatePhoneShareButtons();
     }
+    function getRestorableTopicPracticeSession(topic, sourceSentences) {
+      var session = normalizeStoredPracticeSession(topic && topic.practiceSession);
+      if (!session) return null;
+      if (session.sourceSignature !== getSourceSentenceSignature(sourceSentences || createSentenceRecordsFromText(elements.sourceText.value))) return null;
+      return session;
+    }
+    function updateStartButtonCopy() {
+      if (!elements.startButton) return;
+      var topic = getSelectedTopic();
+      var hasSession = !!getRestorableTopicPracticeSession(topic, createSentenceRecordsFromText(elements.sourceText.value));
+      elements.startButton.textContent = hasSession ? "이어하기" : "연습 시작";
+      elements.startButton.title = hasSession ? "저장된 진행 상황 이어하기" : "선택한 주제로 연습 시작";
+      elements.startButton.setAttribute("aria-label", elements.startButton.title);
+    }
+    function updatePracticeTopicSwitcher() {
+      if (!elements.practiceTopicSwitcher || !elements.practiceTopicSelect) return;
+      elements.practiceTopicSwitcher.hidden = !state.active;
+      if (elements.topicManageButton) elements.topicManageButton.hidden = !state.active;
+      if (!state.active) return;
+      if (state.selectedTopicId) elements.practiceTopicSelect.value = state.selectedTopicId;
+    }
+    function saveCurrentTopicManually() {
+      var hasSource = !!splitIntoSentences(elements.sourceText.value).length;
+      saveSourceDraft();
+      if (state.active) saveSelectedTopicPracticeSession(false);
+      updateStartButtonCopy();
+      setFeedback(
+        "저장했습니다.",
+        state.active
+          ? (hasSource ? "현재 주제와 연습 진행 상황을 저장했습니다." : "현재 주제의 설정과 진행 상황을 저장했습니다.")
+          : "현재 주제의 모범 답안을 저장했습니다.",
+        "",
+        "success"
+      );
+    }
+    function openTopicManager() {
+      if (state.active) saveSelectedTopicPracticeSession(false);
+      saveSourceDraft();
+      elements.sourceSection.hidden = false;
+      elements.sourceTrigger.hidden = true;
+      updateStartButtonCopy();
+      requestAnimationFrame(function() {
+        elements.sourceSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (elements.topicTitleInput) elements.topicTitleInput.focus();
+      });
+      setFeedback("주제 관리로 이동했습니다.", "원하는 주제를 고르거나 모범 답안을 수정한 뒤 저장하거나 이어하기를 누르세요.", "", "note");
+    }
+    function cancelScheduledTopicSessionSave() {
+      if (!topicSessionSaveFrameId) return;
+      cancelAnimationFrame(topicSessionSaveFrameId);
+      topicSessionSaveFrameId = null;
+    }
+    function clearTopicPracticeSession(topic) {
+      if (!topic || !topic.practiceSession) return false;
+      topic.practiceSession = null;
+      topic.updatedAt = Date.now();
+      return true;
+    }
+    function saveSelectedTopicPracticeSession(clearIfInactive) {
+      cancelScheduledTopicSessionSave();
+      var topic = getSelectedTopic();
+      if (!topic) return;
+      if (state.active) {
+        var snapshot = serializeCurrentPracticeSession();
+        if (!snapshot) return;
+        topic.practiceSession = snapshot;
+        topic.updatedAt = Date.now();
+        persistTopicLibrary();
+        return;
+      }
+      if (clearIfInactive && clearTopicPracticeSession(topic)) {
+        persistTopicLibrary();
+        updateStartButtonCopy();
+      }
+    }
+    function scheduleSelectedTopicPracticeSessionSave() {
+      if (!state.active) return;
+      cancelScheduledTopicSessionSave();
+      topicSessionSaveFrameId = requestAnimationFrame(function() {
+        topicSessionSaveFrameId = null;
+        saveSelectedTopicPracticeSession(false);
+      });
+    }
     function saveSourceDraft() {
-      try {
-        var value = elements.sourceText.value;
-        if (value.trim()) localStorage.setItem(SOURCE_DRAFT_KEY, value);
-        else localStorage.removeItem(SOURCE_DRAFT_KEY);
-      } catch (e) {}
+      var topic = ensureSelectedTopic();
+      if (!topic) return;
+      var nextSourceText = elements.sourceText.value || "";
+      var nextManualSourceSentences = state.manualSourceSentences &&
+        normalizeSourceText(nextSourceText) === normalizeSourceText(getManualSourceText(state.manualSourceSentences))
+        ? state.manualSourceSentences.slice()
+        : null;
+      var sourceChanged =
+        normalizeSourceText(topic.sourceText) !== normalizeSourceText(nextSourceText) ||
+        getManualSourceSentenceSignature(topic.manualSourceSentences) !== getManualSourceSentenceSignature(nextManualSourceSentences);
+      topic.sourceText = nextSourceText;
+      topic.manualSourceSentences = nextManualSourceSentences;
+      if (sourceChanged) clearTopicPracticeSession(topic);
+      topic.updatedAt = Date.now();
+      persistTopicLibrary();
+      updateStartButtonCopy();
     }
     function restoreSourceDraft() {
-      try {
-        var saved = localStorage.getItem(SOURCE_DRAFT_KEY);
-        if (saved) elements.sourceText.value = saved;
-      } catch (e) {}
+      loadTopicLibrary();
+      applySelectedTopicToSource();
+    }
+    function selectTopic(topicId, announce) {
+      if (!topicId || topicId === state.selectedTopicId) return;
+      saveSourceDraft();
+      state.selectedTopicId = topicId;
+      persistTopicLibrary();
+      applySelectedTopicToSource();
+      if (announce) {
+        var topic = getSelectedTopic();
+        var hasSession = !!getRestorableTopicPracticeSession(topic, createSentenceRecordsFromText(elements.sourceText.value));
+        setFeedback(
+          "주제를 불러왔습니다.",
+          hasSession ? "저장된 진행이 있습니다. 이어하기를 누르면 같은 지점에서 다시 시작할 수 있습니다." : "선택한 주제의 모범 답안을 이어서 연습할 수 있습니다.",
+          "",
+          "note"
+        );
+      }
+    }
+    function updateTopicTitle(shouldNormalizeInput) {
+      var topic = ensureSelectedTopic();
+      if (!topic) return;
+      var nextTitle = normalizeTopicTitleValue(elements.topicTitleInput.value);
+      if (!nextTitle) {
+        if (!shouldNormalizeInput) return;
+        nextTitle = topic.title || getNextTopicDefaultTitle(state.topics);
+        elements.topicTitleInput.value = nextTitle;
+      }
+      topic.title = nextTitle;
+      topic.updatedAt = Date.now();
+      persistTopicLibrary();
+      renderTopicSelector();
+      elements.topicSelect.value = topic.id;
+    }
+    function createNewTopic() {
+      saveSourceDraft();
+      var topic = createTopicRecord({
+        title: getNextTopicDefaultTitle(state.topics),
+        topicsContext: state.topics
+      });
+      state.topics.push(topic);
+      state.selectedTopicId = topic.id;
+      persistTopicLibrary();
+      applySelectedTopicToSource();
+      elements.topicTitleInput.focus();
+      elements.topicTitleInput.select();
+      setFeedback("새 주제를 만들었습니다.", "주제명과 모범 답안을 입력하면 이 브라우저에 바로 저장됩니다.", "", "note");
+    }
+    function deleteSelectedTopic() {
+      var topic = ensureSelectedTopic();
+      if (!topic) return;
+      if (!confirm('"' + topic.title + '" 주제를 삭제할까요? 저장된 모범 답안과 문장 편집 내용이 함께 지워집니다.')) return;
+      var index = getSelectedTopicIndex();
+      if (index === -1) return;
+      state.topics.splice(index, 1);
+      if (!state.topics.length) {
+        state.topics.push(createTopicRecord({ title: "주제 1", topicsContext: [] }));
+      }
+      state.selectedTopicId = state.topics[Math.min(index, state.topics.length - 1)].id;
+      state.manualSourceSentences = null;
+      persistTopicLibrary();
+      applySelectedTopicToSource();
+      setFeedback("주제를 삭제했습니다.", "남아 있는 주제로 전환했습니다.", "", "close");
+    }
+    function resetPracticeStateToIdle() {
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
+      stopSpeaking();
+      stopTimer();
+      hideCelebration();
+      hideComparison();
+      hideHint();
+      hideDifficultyRow();
+      clearSentenceDiff();
+      clearClozeMarks();
+      state.sourceSentences = [];
+      state.currentQueue = [];
+      state.retryQueue = [];
+      state.currentIndex = 0;
+      state.round = 1;
+      state.totalAttempts = 0;
+      state.correctAttempts = 0;
+      state.wrongAttempts = 0;
+      state.solvedIds = new Set();
+      state.startedAt = null;
+      state.committedHistory = [];
+      state.historyAcceptedCounter = 0;
+      state.historyCollapsed = false;
+      state.historyAutoScrollPending = false;
+      state.sentenceHighlights = {};
+      state.targetSentenceView = { mode: "static", diffActualText: "" };
+      state.active = false;
+      state.waitingForNext = false;
+      state.hintLevel = 0;
+      state.difficultyMap = {};
+      state.similarityLog = [];
+      state.currentStage = "full";
+      state.clozeData = null;
+      state.currentClozeMode = null;
+      state.clozePassedForCurrent = false;
+      state.keywordStats = null;
+      state.gradedAt = 0;
+      state.compareState = { visible: false, expected: "", actual: "" };
+      elements.userInput.value = "";
+      elements.userInput.disabled = true;
+      elements.checkButton.disabled = true;
+      elements.nextButton.disabled = true;
+      elements.retryButton.disabled = true;
+      elements.hintButton.disabled = true;
+      elements.sentenceActionRow.hidden = true;
+      elements.memorizeMsg.textContent = "";
+      elements.restartButton.disabled = !splitIntoSentences(elements.sourceText.value).length;
+      setPracticeAuxVisibility(false);
+      elements.sourceSection.hidden = false;
+      elements.sourceTrigger.hidden = true;
+      updatePhoneShareButtons();
+      renderCurrentSentence();
+      refreshStats();
+      refreshProgress();
+      updatePracticeTopicSwitcher();
+    }
+    function restoreHintToLevel(text, level) {
+      var chars = Array.from(text || "");
+      state.hintLevel = Math.min(Math.max(0, level || 0), chars.length);
+      if (!state.hintLevel) {
+        hideHint();
+        return;
+      }
+      elements.hintText.textContent = chars.slice(0, state.hintLevel).join("") + chars.slice(state.hintLevel).map(function(c) { return c === " " ? " " : "_"; }).join("");
+      elements.hintDisplay.hidden = false;
+      elements.hintLevel.textContent = "(" + state.hintLevel + "/" + chars.length + "자 공개)";
+      elements.hintButton.disabled = state.hintLevel >= chars.length;
+    }
+    function applyRestoredClozeInputValues(values) {
+      var inputs = getClozeInputs();
+      for (var i = 0; i < inputs.length; i++) {
+        inputs[i].value = values && typeof values[i] === "string" ? values[i] : "";
+      }
+    }
+    function applyRestoredSentenceView(cur, session) {
+      var viewMode = session && session.viewMode ? session.viewMode : "ready";
+      var hasClozeStage = state.currentStage === "cloze" && !!state.clozeData;
+      if ((viewMode === "cloze-entry" || viewMode === "cloze-reviewed") && !hasClozeStage) viewMode = "ready";
+      if (viewMode === "memorize" && state.currentStage !== "full") viewMode = "ready";
+      elements.userInput.value = session.userInputValue || "";
+      hideComparison();
+      clearSentenceDiff();
+      hideDifficultyRow();
+      hideHint();
+      state.waitingForNext = false;
+      state.gradedAt = session.gradedAt || 0;
+      elements.nextButton.disabled = true;
+      elements.retryButton.disabled = true;
+
+      if (viewMode === "memorize") {
+        document.body.classList.remove("cloze-mode");
+        elements.sentenceCard.classList.add("memorize");
+        elements.sentenceCard.classList.remove("cloze-active", "cloze-locked");
+        elements.sentenceActionRow.hidden = true;
+        elements.memorizeMsg.textContent = "문장이 가려졌습니다. 기억해서 써보세요!";
+        elements.userInput.disabled = false;
+        elements.checkButton.disabled = false;
+        elements.hintButton.disabled = false;
+        restoreHintToLevel(cur.text, session.hintLevel);
+      } else if (viewMode === "cloze-entry") {
+        renderClozeDisplay(state.clozeData);
+        applyRestoredClozeInputValues(session.clozeInputs);
+        elements.sentenceCard.classList.remove("memorize", "cloze-locked");
+        elements.sentenceCard.classList.add("cloze-active");
+        document.body.classList.add("cloze-mode");
+        elements.sentenceActionRow.hidden = true;
+        elements.memorizeMsg.textContent = "빈칸에 직접 입력한 뒤 채점하세요. (" + state.clozeData.blanks.length + "개)";
+        elements.userInput.disabled = true;
+        elements.checkButton.disabled = false;
+        elements.hintButton.disabled = true;
+      } else if (viewMode === "cloze-reviewed") {
+        renderClozeDisplay(state.clozeData);
+        applyRestoredClozeInputValues(session.clozeInputs);
+        clearClozeMarks();
+        var result = gradeClozeInline();
+        for (var i = 0; i < result.details.length; i++) {
+          var detail = result.details[i];
+          if (detail.ok) {
+            detail.input.classList.add("correct");
+            detail.input.disabled = true;
+          } else {
+            detail.input.classList.add("wrong");
+            var answer = document.createElement("span");
+            answer.className = "cloze-answer";
+            answer.textContent = detail.input.getAttribute("data-display") || detail.expected;
+            detail.input.parentNode.insertBefore(answer, detail.input.nextSibling);
+          }
+        }
+        elements.sentenceCard.classList.remove("memorize");
+        elements.sentenceCard.classList.add("cloze-active", "cloze-locked");
+        document.body.classList.add("cloze-mode");
+        elements.sentenceActionRow.hidden = false;
+        elements.memorizeMsg.textContent = "결과를 확인하세요. 다시 도전하려면 '다시 도전' 버튼을 누르세요.";
+        elements.userInput.disabled = true;
+        elements.checkButton.disabled = true;
+        elements.hintButton.disabled = true;
+        state.waitingForNext = true;
+        elements.nextButton.disabled = false;
+        elements.retryButton.disabled = false;
+        showDifficultyRow(cur.id);
+      } else if (viewMode === "reviewed") {
+        revealSentence();
+        elements.userInput.value = session.userInputValue || "";
+        elements.userInput.disabled = true;
+        elements.checkButton.disabled = true;
+        elements.hintButton.disabled = true;
+        state.waitingForNext = true;
+        elements.nextButton.disabled = false;
+        elements.retryButton.disabled = false;
+        showDifficultyRow(cur.id);
+        if (session.compareState && session.compareState.visible) {
+          showComparison(session.compareState.expected, session.compareState.actual);
+          highlightSentenceDiff(cur.text, session.userInputValue || session.compareState.actual);
+        }
+      } else {
+        document.body.classList.remove("cloze-mode");
+        elements.sentenceCard.classList.remove("memorize", "cloze-active", "cloze-locked");
+        elements.sentenceActionRow.hidden = false;
+        elements.userInput.disabled = true;
+        elements.checkButton.disabled = true;
+        elements.hintButton.disabled = true;
+      }
+
+      if (session.feedback) setFeedback(session.feedback.title, session.feedback.text, session.feedback.tone, session.feedback.icon);
+      else setFeedback("저장된 지점으로 돌아왔습니다.", "이전 주제의 진행 상황을 이어서 연습할 수 있습니다.", "", "note");
+      updateStageBadge();
+      updateStageToggleButton();
+      refreshSentenceActionButtons();
+      if (viewMode === "memorize") elements.userInput.focus();
+      else if (viewMode === "cloze-entry") {
+        var firstInput = elements.clozeDisplay.querySelector(".cloze-input");
+        if (firstInput) firstInput.focus();
+      } else if (state.waitingForNext && !elements.nextButton.disabled) elements.nextButton.focus();
+      else elements.memorizeBtn.focus();
+    }
+    function restoreSelectedTopicPracticeSession() {
+      var topic = getSelectedTopic();
+      var sourceSentences = createSentenceRecordsFromText(elements.sourceText.value);
+      var session = getRestorableTopicPracticeSession(topic, sourceSentences);
+      if (!topic || !session || !sourceSentences.length) return false;
+      var lookup = buildSentenceLookup(sourceSentences);
+      var currentQueue = hydrateSentenceQueueByIds(session.currentQueueIds, lookup);
+      var retryQueue = hydrateSentenceQueueByIds(session.retryQueueIds, lookup);
+      if (!currentQueue || !currentQueue.length || !retryQueue) return false;
+      if (session.currentIndex >= currentQueue.length) return false;
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
+      stopSpeaking();
+      stopTimer();
+      hideCelebration();
+      state.sourceSentences = sourceSentences;
+      rebuildKeywordStats();
+      state.currentQueue = currentQueue;
+      state.retryQueue = retryQueue;
+      state.currentIndex = session.currentIndex;
+      state.round = session.round;
+      state.totalAttempts = session.totalAttempts;
+      state.correctAttempts = session.correctAttempts;
+      state.wrongAttempts = session.wrongAttempts;
+      state.solvedIds = new Set(session.solvedIds.filter(function(id) { return !!lookup[id]; }));
+      state.startedAt = session.startedAt || Date.now();
+      state.committedHistory = session.committedHistory.filter(function(entry) { return !!lookup[entry.sentenceId]; });
+      state.historyAcceptedCounter = Math.max(session.historyAcceptedCounter, state.committedHistory.reduce(function(maxValue, entry) {
+        return Math.max(maxValue, entry.acceptedAtOrder || 0);
+      }, 0));
+      state.historyCollapsed = !!session.historyCollapsed;
+      state.historyAutoScrollPending = false;
+      state.sentenceHighlights = hydrateSentenceHighlightsFromSession(session.sentenceHighlights);
+      state.targetSentenceView = { mode: "static", diffActualText: "" };
+      state.active = true;
+      state.waitingForNext = false;
+      state.hintLevel = 0;
+      state.difficultyMap = normalizeStoredDifficultyMap(session.difficultyMap);
+      state.similarityLog = session.similarityLog.slice();
+      state.currentStage = session.currentStage;
+      state.currentClozeMode = session.currentClozeMode;
+      state.clozeData = null;
+      state.clozePassedForCurrent = !!session.clozePassedForCurrent;
+      state.gradedAt = session.gradedAt || 0;
+      state.lastFeedback = session.feedback || { title: "", text: "", tone: "", icon: "note" };
+      state.compareState = normalizeStoredCompareState(session.compareState);
+      elements.restartButton.disabled = false;
+      setPracticeAuxVisibility(true);
+      elements.sourceSection.hidden = true;
+      elements.sourceTrigger.hidden = false;
+      updatePhoneShareButtons();
+      renderCurrentSentence(session);
+      scheduleSelectedTopicPracticeSessionSave();
+      return true;
+    }
+    function startSelectedTopicPractice() {
+      if (restoreSelectedTopicPracticeSession()) return;
+      startPractice();
+    }
+    function switchPracticeTopic(topicId) {
+      if (!topicId || topicId === state.selectedTopicId) return;
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
+      stopSpeaking();
+      saveSelectedTopicPracticeSession(false);
+      state.selectedTopicId = topicId;
+      persistTopicLibrary();
+      applySelectedTopicToSource();
+      if (restoreSelectedTopicPracticeSession()) return;
+      if (splitIntoSentences(elements.sourceText.value).length) {
+        startPractice();
+        return;
+      }
+      resetPracticeStateToIdle();
+      setFeedback("주제를 바꿨습니다.", "이 주제에는 아직 모범 답안이 없습니다. 내용을 입력한 뒤 시작해 주세요.", "", "note");
     }
     function setSpeechRate(rate) {
       var next = parseFloat(rate);
@@ -3121,12 +4078,19 @@
       elements.feedbackCard.className="feedback-card animate-feedback"+(tone?" "+tone:"");
       elements.feedbackTitle.textContent=title;elements.feedbackText.textContent=text;
       elements.feedbackIcon.innerHTML=getFeedbackIcon(icon || (tone==="good"?"success":tone==="bad"?"warning":tone==="retry"?"retry":"note"));
+      state.lastFeedback = {
+        title: title || "",
+        text: text || "",
+        tone: tone || "",
+        icon: icon || (tone==="good"?"success":tone==="bad"?"warning":tone==="retry"?"retry":"note")
+      };
     }
     function stopTimer(){if(state.timerId){clearInterval(state.timerId);state.timerId=null;}}
     function startTimer(){stopTimer();}
     function setPracticeAuxVisibility(isPracticeActive){
       elements.heatmapPanel.hidden = !!isPracticeActive;
       elements.footerNote.hidden = !!isPracticeActive;
+      updatePracticeTopicSwitcher();
     }
     function releaseEnterAdvanceLock(e){
       if (!e || e.key === "Enter") state.enterAdvanceLocked = false;
@@ -3144,8 +4108,9 @@
         af.appendChild(diffSpan(part.actual,part.actualState));
       });
       elements.expectedDiff.appendChild(ef);elements.actualDiff.appendChild(af);elements.compareCard.hidden=false;
+      state.compareState = { visible: true, expected: expected, actual: actual };
     }
-    function hideComparison(){elements.compareCard.hidden=true;elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();}
+    function hideComparison(){elements.compareCard.hidden=true;elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();state.compareState = { visible: false, expected: "", actual: "" };}
     function buildAlignedDiff(expected,actual){
       var ec=Array.from(expected),ac=Array.from(actual);
       var rows=ec.length+1,cols=ac.length+1;
@@ -3264,6 +4229,8 @@
       var sentences = getShareableSentences();
       if (!sentences.length) return "";
       var lines = ["[생각이 피어나는 연습장]"];
+      var topic = getSelectedTopic();
+      if (topic && topic.title) lines.push("주제: " + topic.title);
       if (state.active && state.sourceSentences.length) {
         lines.push("진행 위치: " + elements.progressPosition.textContent);
         lines.push("완료: " + elements.progressDone.textContent);
@@ -3461,7 +4428,7 @@
       refreshSourceMeta();
       if (!state.active) {
         state.sourceSentences = cleaned.map(function(t, i) { return { id: i + 1, text: t }; });
-        state.keywordStats = buildKeywordStats(state.sourceSentences);
+        rebuildKeywordStats();
       }
       refreshProgress();
       renderSourceModalEditor();
@@ -3548,6 +4515,7 @@
         elements.userInput.disabled=true;
         elements.checkButton.disabled=false;elements.hintButton.disabled=true;
         var first=elements.clozeDisplay.querySelector(".cloze-input");
+        scheduleSelectedTopicPracticeSessionSave();
         if(first)first.focus();
         return;
       }
@@ -3558,6 +4526,7 @@
       elements.memorizeMsg.textContent="문장이 가려졌습니다. 기억해서 써보세요!";
       elements.userInput.placeholder="현재 문장을 그대로 입력하세요.";
       elements.userInput.disabled=false;elements.checkButton.disabled=false;elements.hintButton.disabled=false;
+      scheduleSelectedTopicPracticeSessionSave();
       elements.userInput.focus();
     }
     function revealSentence(){finishSentenceRecording("auto");stopSentencePlayback();stopSpeaking();elements.sentenceCard.classList.remove("memorize","cloze-active","cloze-locked");document.body.classList.remove("cloze-mode");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";updateReadButtonState();updateSentenceRecordingButtons();}
@@ -3579,6 +4548,7 @@
       elements.hintDisplay.hidden=false;
       elements.hintLevel.textContent="("+state.hintLevel+"/"+ch.length+"자 공개)";
       if(state.hintLevel>=ch.length)elements.hintButton.disabled=true;
+      scheduleSelectedTopicPracticeSessionSave();
     }
 
     function retryCurrentSentence(){
@@ -3596,6 +4566,7 @@
         elements.checkButton.disabled = false;
         elements.memorizeMsg.textContent = "빈칸에 직접 입력한 뒤 채점하세요. (" + state.clozeData.blanks.length + "개)";
         setFeedback("다시 도전하세요.", "틀린 빈칸만 다시 채워 보세요.", "", "write");
+        scheduleSelectedTopicPracticeSessionSave();
         (firstWrong || inputs[0]).focus();
         return;
       }
@@ -3606,6 +4577,7 @@
       elements.memorizeMsg.textContent="문장을 다시 읽은 뒤 가리고 써보세요.";
       elements.userInput.disabled=true;elements.checkButton.disabled=true;elements.hintButton.disabled=true;
       refreshSentenceActionButtons();
+      scheduleSelectedTopicPracticeSessionSave();
       elements.memorizeBtn.focus();
       setFeedback("다시 도전하세요.","같은 문장을 다시 읽고 기억해서 써보세요.","","write");
     }
@@ -3625,6 +4597,7 @@
       if(!cur)return;
       state.solvedIds.add(cur.id);
       setFeedback("다음 문장으로 넘어갑니다.","연습이 필요 없는 문장은 바로 건너뛸 수 있습니다.","","next");
+      scheduleSelectedTopicPracticeSessionSave();
       moveToNextSentence();
     }
     function moveToNextSentence(){
@@ -3636,7 +4609,7 @@
       state.historyAutoScrollPending = true;
       hideDifficultyRow();hideComparison();state.currentIndex+=1;renderCurrentSentence();
     }
-    function renderCurrentSentence(){
+    function renderCurrentSentence(restoredSession){
       finishSentenceRecording("auto");
       stopSentencePlayback();
       stopSpeaking();
@@ -3662,7 +4635,9 @@
       renderSentenceWithKeywords(cur.text);
       elements.sentenceCard.classList.remove("animate-in","memorize","cloze-active","cloze-locked");document.body.classList.remove("cloze-mode");
       void elements.sentenceCard.offsetWidth;elements.sentenceCard.classList.add("animate-in");
-      var stageInfo = getInitialStageInfo(cur.text);
+      var stageInfo = restoredSession
+        ? { stage: restoredSession.currentStage, clozeMode: restoredSession.currentClozeMode }
+        : getInitialStageInfo(cur.text);
       state.currentStage = stageInfo.stage;
       state.currentClozeMode = stageInfo.clozeMode;
       state.clozeData = (state.currentStage === "cloze") ? buildClozeData(cur.text, state.currentClozeMode) : null;
@@ -3670,7 +4645,7 @@
         state.currentStage = "full";
         state.currentClozeMode = null;
       }
-      state.clozePassedForCurrent = false;
+      state.clozePassedForCurrent = restoredSession ? !!restoredSession.clozePassedForCurrent : false;
       elements.sentenceActionRow.hidden=false;
       elements.memorizeMsg.textContent=(state.currentStage === "cloze")
         ? "이 문장은 빈칸 모드로 시작합니다. 읽고 기억하세요."
@@ -3681,7 +4656,10 @@
       updateStageBadge();updateStageToggleButton();
       renderHistoryPanel();
       refreshCurrentSentenceRecordingState();
-      elements.memorizeBtn.focus();refreshProgress();refreshStats();
+      if (restoredSession) applyRestoredSentenceView(cur, restoredSession);
+      else elements.memorizeBtn.focus();
+      refreshProgress();refreshStats();
+      scheduleSelectedTopicPracticeSessionSave();
     }
     function finishPractice(){
       finishSentenceRecording("auto");
@@ -3703,6 +4681,7 @@
       renderHeatmapPanel();
       setPracticeAuxVisibility(false);
       elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;
+      saveSelectedTopicPracticeSession(true);
       showCelebration();
     }
     function startPractice(){
@@ -3713,7 +4692,7 @@
       stopSpeaking();
       stopTimer();hideCelebration();
       state.sourceSentences=sentences.map(function(t,i){return{id:i+1,text:t}});
-      state.keywordStats=buildKeywordStats(state.sourceSentences);
+      rebuildKeywordStats();
       state.currentQueue=state.sourceSentences.slice();state.retryQueue=[];
       state.currentIndex=0;state.round=1;state.totalAttempts=0;state.correctAttempts=0;state.wrongAttempts=0;
       state.committedHistory=[];state.historyAcceptedCounter=0;
@@ -3726,6 +4705,7 @@
       elements.sourceSection.hidden=true;elements.sourceTrigger.hidden=false;
       updatePhoneShareButtons();
       renderCurrentSentence();
+      scheduleSelectedTopicPracticeSessionSave();
     }
     function submitAnswer(){
       if(!state.active||state.waitingForNext)return;
@@ -3767,6 +4747,7 @@
       state.gradedAt=Date.now();
       state.waitingForNext=true;elements.nextButton.disabled=false;elements.retryButton.disabled=false;
       showDifficultyRow(cur.id);
+      scheduleSelectedTopicPracticeSessionSave();
       setTimeout(function(){ if(state.waitingForNext) elements.nextButton.focus(); },260);
     }
 
@@ -3818,7 +4799,9 @@
         elements.nextButton.disabled = false;
         elements.retryButton.disabled = true;
         showDifficultyRow(cur.id);
-        updateStageBadge(); updateStageToggleButton();
+        updateStageBadge();
+        updateStageToggleButton();
+        scheduleSelectedTopicPracticeSessionSave();
         elements.memorizeBtn.focus();
       } else {
         setFeedback(
@@ -3834,6 +4817,7 @@
         elements.nextButton.disabled = false;
         showDifficultyRow(cur.id);
         updateStageToggleButton();
+        scheduleSelectedTopicPracticeSessionSave();
         setTimeout(function(){ if(state.waitingForNext) elements.nextButton.focus(); },260);
       }
     }
@@ -3929,8 +4913,16 @@
     function hideCelebration(){elements.celebrationOverlay.classList.remove("visible");setTimeout(function(){elements.celebrationOverlay.hidden=true;},300);}
 
     // Events
-    elements.sourceText.addEventListener("input",function(){clearManualSourceSentences();saveSourceDraft();refreshSourceMeta();});
-    elements.startButton.addEventListener("click",startPractice);
+    elements.topicSelect.addEventListener("change",function(){selectTopic(elements.topicSelect.value, true);});
+    elements.practiceTopicSelect.addEventListener("change",function(){switchPracticeTopic(elements.practiceTopicSelect.value);});
+    elements.topicTitleInput.addEventListener("input",function(){updateTopicTitle(false);});
+    elements.topicTitleInput.addEventListener("blur",function(){updateTopicTitle(true);});
+    elements.topicNewButton.addEventListener("click",createNewTopic);
+    elements.topicDeleteButton.addEventListener("click",deleteSelectedTopic);
+    elements.saveTopicButton.addEventListener("click",saveCurrentTopicManually);
+    elements.topicManageButton.addEventListener("click",openTopicManager);
+    elements.sourceText.addEventListener("input",function(){state.manualSourceSentences=null;saveSourceDraft();refreshSourceMeta();});
+    elements.startButton.addEventListener("click",startSelectedTopicPractice);
     elements.restartButton.addEventListener("click",startPractice);
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
     elements.readSentenceButton.addEventListener("click",speakCurrentSentence);
@@ -4018,6 +5010,7 @@
       if(state.waitingForNext)moveToNextSentence();
       else submitAnswer();
     });
+    elements.userInput.addEventListener("input",scheduleSelectedTopicPracticeSessionSave);
     elements.clozeDisplay.addEventListener("keydown",function(e){
       var t=e.target;if(!t||!t.classList||!t.classList.contains("cloze-input"))return;
       if(e.isComposing||e.keyCode===229)return;
@@ -4043,12 +5036,16 @@
         else{state.enterAdvanceLocked = true;submitAnswer();}
       }
     });
+    elements.clozeDisplay.addEventListener("input",function(e){
+      if (e.target && e.target.classList && e.target.classList.contains("cloze-input")) scheduleSelectedTopicPracticeSessionSave();
+    });
     document.addEventListener("keydown",handlePracticeShortcuts,true);
     document.addEventListener("keyup",releaseEnterAdvanceLock,true);
     document.addEventListener("keyup",suppressShortcutKeyup,true);
     window.addEventListener("resize",queueHistoryPanelViewportLimit);
     window.addEventListener("scroll",queueHistoryPanelViewportLimit,{passive:true});
     window.addEventListener("pagehide",function(){
+      saveSelectedTopicPracticeSession(false);
       finishSentenceRecording("auto");
       stopSentencePlayback();
       stopSpeaking();
@@ -4077,6 +5074,7 @@
     }
     refreshSentenceActionButtons();
     updateSentenceRecordingButtons();
+    updatePracticeTopicSwitcher();
     refreshSourceMeta();refreshStats();refreshProgress();
   </script>
 </body>

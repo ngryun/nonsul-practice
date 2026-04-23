@@ -2401,6 +2401,15 @@
     function getSentenceHighlightSet(text) {
       return state.sentenceHighlights[getSentenceKey(text)] || {};
     }
+    function getHighlightedTokenIndices(text, tokenInfo) {
+      var info = tokenInfo || splitSentenceTokens(text);
+      var highlightSet = getSentenceHighlightSet(text);
+      var indices = [];
+      for (var i = 0; i < info.map.length; i++) {
+        if (highlightSet[info.map[i]]) indices.push(i);
+      }
+      return indices;
+    }
     function toggleSentenceHighlight(text, displayIndex) {
       if (displayIndex < 0) return;
       var key = getSentenceKey(text);
@@ -2440,7 +2449,7 @@
         if (i < displayTokens.length - 1) frag.appendChild(document.createTextNode(" "));
       }
       elements.targetSentence.classList.add("is-markable");
-      elements.targetSentence.title = "어절을 눌러 형광펜 표시/해제";
+      elements.targetSentence.title = "어절을 눌러 형광펜 표시/해제 · 표시한 어절은 빈칸 모드에서 우선 출제";
       elements.targetSentence.replaceChildren(frag);
     }
     function setSentenceHard(sentenceId, isHard) {
@@ -2660,31 +2669,37 @@
       return { ratio: CLOZE_ASSIST_BLANK_RATIO, maxBlanks: CLOZE_ASSIST_MAX_BLANKS };
     }
     function buildClozeData(text, mode) {
-      var tokens = tokenize(text);
+      var info = splitSentenceTokens(text);
+      var tokens = info.grading;
       if (tokens.length < 2) return null;
-      // Keep original (display) tokens — same count as normalized tokens,
-      // just split by whitespace without stripping special chars.
-      var displayTokens = text.replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean);
+      var displayTokens = info.map.map(function(displayIndex, tokenIndex) {
+        return info.display[displayIndex] || tokens[tokenIndex];
+      });
       var key = getSentenceKey(text);
       var heatmap = loadHeatmap();
       var errorMap = (heatmap[key] && heatmap[key].tokenErrors) || {};
+      var highlightIndices = getHighlightedTokenIndices(text, info);
+      var highlightSet = buildIndexSet(highlightIndices);
       var eligible = [];
       for (var i = 0; i < tokens.length; i++) {
-        if (isKeywordCandidate(tokens[i])) eligible.push(i);
+        if (highlightSet[i] || isKeywordCandidate(tokens[i])) eligible.push(i);
       }
       if (!eligible.length) {
         for (var f = 0; f < tokens.length; f++) {
-          if (Array.from(tokens[f]).length >= 2) eligible.push(f);
+          if (highlightSet[f] || Array.from(tokens[f]).length >= 2) eligible.push(f);
         }
       }
       if (!eligible.length) eligible = tokens.map(function (_, i) { return i; });
       var rng = mulberry32(seedFromString(key));
       var scored = eligible.map(function (idx) {
-        return { idx: idx, score: scoreClozeCandidate(tokens[idx], errorMap) + rng() * 0.01 };
+        var score = scoreClozeCandidate(tokens[idx], errorMap) + rng() * 0.01;
+        if (highlightSet[idx]) score += 1000;
+        return { idx: idx, score: score };
       });
       scored.sort(function (a, b) { return b.score - a.score; });
       var settings = getClozeSettings(mode);
-      var targetCount = Math.max(1, Math.min(eligible.length, settings.maxBlanks, Math.ceil(eligible.length * settings.ratio)));
+      var baseTargetCount = Math.max(1, Math.min(eligible.length, settings.maxBlanks, Math.ceil(eligible.length * settings.ratio)));
+      var targetCount = Math.max(baseTargetCount, Math.min(highlightIndices.length, settings.maxBlanks, eligible.length));
       var picked = scored.slice(0, targetCount).map(function (s) { return s.idx; });
       picked.sort(function (a, b) { return a - b; });
       return { tokens: tokens, displayTokens: displayTokens, blanks: picked, weakSet: errorMap };

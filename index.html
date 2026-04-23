@@ -3537,7 +3537,7 @@
         elements.checkButton.disabled = true;
         elements.hintButton.disabled = true;
         state.waitingForNext = true;
-        elements.nextButton.disabled = false;
+        elements.nextButton.disabled = true;
         elements.retryButton.disabled = false;
         showDifficultyRow(cur.id);
       } else if (viewMode === "reviewed") {
@@ -3572,6 +3572,8 @@
       else if (viewMode === "cloze-entry") {
         var firstInput = elements.clozeDisplay.querySelector(".cloze-input");
         if (firstInput) firstInput.focus();
+      } else if (state.waitingForNext && elements.nextButton.disabled && !elements.retryButton.disabled) {
+        elements.retryButton.focus();
       } else if (state.waitingForNext && !elements.nextButton.disabled) elements.nextButton.focus();
       else elements.memorizeBtn.focus();
     }
@@ -4943,6 +4945,18 @@
     function shouldBlockHeldEnter(e){
       return !!(e && (e.repeat || state.enterAdvanceLocked));
     }
+    function triggerPrimaryWaitingAction(){
+      if(!state.waitingForNext)return false;
+      if(!elements.nextButton.disabled){
+        moveToNextSentence();
+        return true;
+      }
+      if(!elements.retryButton.disabled){
+        retryCurrentSentence();
+        return true;
+      }
+      return false;
+    }
 
     function showComparison(expected,actual) {
       elements.expectedDiff.replaceChildren();elements.actualDiff.replaceChildren();
@@ -5653,7 +5667,7 @@
       } else {
         setFeedback(
           "빈칸 " + result.correct + "/" + result.total + " 정답",
-          "빨간 빈칸 옆에 모범 답안이 표시됩니다. '다시 도전', '바로 전체로', '다음 문장' 중 선택하세요.",
+          "빨간 빈칸 옆에 모범 답안이 표시됩니다. '다시 도전'이나 '바로 전체로'를 선택하세요.",
           "bad", "close"
         );
         elements.sentenceActionRow.hidden = false;
@@ -5661,11 +5675,11 @@
         state.gradedAt = Date.now();
         state.waitingForNext = true;
         elements.retryButton.disabled = false;
-        elements.nextButton.disabled = false;
+        elements.nextButton.disabled = true;
         showDifficultyRow(cur.id);
         updateStageToggleButton();
         scheduleSelectedTopicPracticeSessionSave();
-        setTimeout(function(){ if(state.waitingForNext) elements.nextButton.focus(); },260);
+        setTimeout(function(){ if(state.waitingForNext && !elements.retryButton.disabled) elements.retryButton.focus(); },260);
       }
     }
 
@@ -5707,9 +5721,10 @@
       if(!shouldOwnPracticeShortcut(e))return;
       if(e.key==="Enter"){
         if(shouldBlockHeldEnter(e)){consumeShortcutEvent(e);return;}
-        if(state.waitingForNext&&!elements.nextButton.disabled){
+        if(state.waitingForNext&&(!elements.nextButton.disabled||!elements.retryButton.disabled)){
           state.enterAdvanceLocked = true;
-          consumeShortcutEvent(e);moveToNextSentence();
+          consumeShortcutEvent(e);
+          triggerPrimaryWaitingAction();
         }
         return;
       }
@@ -5748,7 +5763,7 @@
     }
     function suppressShortcutKeyup(e){
       if(!shouldOwnPracticeShortcut(e))return;
-      if(e.key==="Enter"&&!(state.waitingForNext&&!elements.nextButton.disabled))return;
+      if(e.key==="Enter"&&!(state.waitingForNext&&(!elements.nextButton.disabled||!elements.retryButton.disabled)))return;
       consumeShortcutEvent(e);
     }
 
@@ -5865,7 +5880,7 @@
       e.preventDefault();
       if(shouldBlockHeldEnter(e))return;
       state.enterAdvanceLocked = true;
-      if(state.waitingForNext)moveToNextSentence();
+      if(state.waitingForNext&&triggerPrimaryWaitingAction())return;
       else submitAnswer();
     });
     elements.userInput.addEventListener("input",scheduleSelectedTopicPracticeSessionSave);
@@ -5876,17 +5891,16 @@
         e.preventDefault();
         if(shouldBlockHeldEnter(e))return;
         state.enterAdvanceLocked = true;
-        if(state.waitingForNext&&!elements.nextButton.disabled)moveToNextSentence();
+        if(state.waitingForNext&&triggerPrimaryWaitingAction())return;
         else submitAnswer();
         return;
       }
       if(e.key==="Enter"){
         e.preventDefault();
         if(shouldBlockHeldEnter(e))return;
-        if(state.waitingForNext&&!elements.nextButton.disabled){
+        if(state.waitingForNext){
           state.enterAdvanceLocked = true;
-          moveToNextSentence();
-          return;
+          if(triggerPrimaryWaitingAction())return;
         }
         var inputs=Array.from(getClozeInputs());
         var idx=inputs.indexOf(t);

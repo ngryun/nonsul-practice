@@ -2355,6 +2355,24 @@
       }
       return { display: parts, grading: gradingTokens, map: indexMap, candidates: candidates };
     }
+    var CLOZE_VISIBLE_PARTICLE_SUFFIXES = [
+      "으로는", "으로도", "까지는", "까지도",
+      "으로", "까지", "부터", "에게", "에서", "한테", "처럼", "보다", "이랑", "하고",
+      "로", "를", "을", "은", "는", "이", "가", "와", "과", "랑"
+    ];
+    function splitKoreanParticleSuffix(token) {
+      var value = String(token || "");
+      if (!/^[가-힣]+$/.test(value)) return { core: value, particle: "" };
+      for (var i = 0; i < CLOZE_VISIBLE_PARTICLE_SUFFIXES.length; i++) {
+        var suffix = CLOZE_VISIBLE_PARTICLE_SUFFIXES[i];
+        if (value.length <= suffix.length || value.slice(-suffix.length) !== suffix) continue;
+        var stem = value.slice(0, -suffix.length);
+        if (!stem) continue;
+        if (suffix.length === 1 && Array.from(stem).length < 2) continue;
+        return { core: stem, particle: suffix };
+      }
+      return { core: value, particle: "" };
+    }
     function splitDisplayTokenAffixes(token) {
       var value = String(token || "");
       if (!value) return { leading: "", core: "", trailing: "" };
@@ -2363,10 +2381,11 @@
       while (start < end && !normalizeForGrading(value.charAt(start))) start++;
       while (end > start && !normalizeForGrading(value.charAt(end - 1))) end--;
       if (start >= end) return { leading: "", core: value, trailing: "" };
+      var particleSplit = splitKoreanParticleSuffix(value.slice(start, end));
       return {
         leading: value.slice(0, start),
-        core: value.slice(start, end),
-        trailing: value.slice(end)
+        core: particleSplit.core,
+        trailing: particleSplit.particle + value.slice(end)
       };
     }
     function buildKeywordStats(sentences) {
@@ -2743,11 +2762,13 @@
         var coreDisplay = affixes.core || dispTok || normTok;
         if (cloze.blanks.indexOf(i) >= 0) {
           var len = Array.from(coreDisplay).length;
+          var coreAnswer = normalizeForGrading(coreDisplay) || normTok;
           var input = document.createElement("input");
           input.type = "text";
           input.className = "cloze-input" + (cloze.weakSet[normTok] ? " weak" : "");
           input.setAttribute("data-idx", String(blankPos));
-          input.setAttribute("data-answer", normTok);       // normalized — for grading
+          input.setAttribute("data-answer", coreAnswer);    // normalized — preferred answer
+          if (coreAnswer !== normTok) input.setAttribute("data-answer-alt", normTok); // full token also accepted
           input.setAttribute("data-display", coreDisplay);  // visible answer text
           input.setAttribute("autocomplete", "off");
           input.setAttribute("autocorrect", "off");
@@ -2777,16 +2798,29 @@
       for (var j = 0; j < answers.length; j++) answers[j].parentNode.removeChild(answers[j]);
       elements.sentenceCard.classList.remove("cloze-locked");
     }
+    function getClozeAcceptedAnswers(input) {
+      var answers = [];
+      var primary = normalizeForGrading(input.getAttribute("data-answer") || "");
+      var alternate = normalizeForGrading(input.getAttribute("data-answer-alt") || "");
+      if (primary) answers.push(primary);
+      if (alternate && answers.indexOf(alternate) < 0) answers.push(alternate);
+      return answers;
+    }
+    function isClozeInputCorrect(input) {
+      var got = normalizeForGrading(input.value || "");
+      return getClozeAcceptedAnswers(input).indexOf(got) >= 0;
+    }
     function gradeClozeInline() {
       if (!state.clozeData) return { passed: false, correct: 0, total: 0 };
       var inputs = getClozeInputs();
       var total = inputs.length, correct = 0, details = [];
       for (var i = 0; i < inputs.length; i++) {
         var expected = inputs[i].getAttribute("data-answer") || "";
+        var acceptedAnswers = getClozeAcceptedAnswers(inputs[i]);
         var got = normalizeForGrading(inputs[i].value || "");
-        var ok = (got === expected);
+        var ok = acceptedAnswers.indexOf(got) >= 0;
         if (ok) correct++;
-        details.push({ input: inputs[i], expected: expected, got: got, ok: ok });
+        details.push({ input: inputs[i], expected: expected, got: got, ok: ok, acceptedAnswers: acceptedAnswers });
       }
       return { passed: correct === total, correct: correct, total: total, details: details };
     }
@@ -5700,7 +5734,7 @@
         var firstWrong = null;
         for (var i = 0; i < inputs.length; i++) {
           inputs[i].disabled = false;
-          if (!firstWrong && normalizeForGrading(inputs[i].value || "") !== (inputs[i].getAttribute("data-answer") || "")) firstWrong = inputs[i];
+          if (!firstWrong && !isClozeInputCorrect(inputs[i])) firstWrong = inputs[i];
         }
         state.waitingForNext = false;
         elements.nextButton.disabled = true; elements.retryButton.disabled = true;

@@ -2449,7 +2449,7 @@
         if (i < displayTokens.length - 1) frag.appendChild(document.createTextNode(" "));
       }
       elements.targetSentence.classList.add("is-markable");
-      elements.targetSentence.title = "어절을 눌러 형광펜 표시/해제 · 표시한 어절은 빈칸 모드에서 우선 출제";
+      elements.targetSentence.title = "어절을 눌러 형광펜 표시/해제 · 표시한 어절은 빈칸 모드에서 반드시 빈칸으로 출제";
       elements.targetSentence.replaceChildren(frag);
     }
     function setSentenceHard(sentenceId, isHard) {
@@ -2690,17 +2690,24 @@
         }
       }
       if (!eligible.length) eligible = tokens.map(function (_, i) { return i; });
+      var forcedBlankSet = buildIndexSet(highlightIndices);
+      var forcedBlankCount = highlightIndices.length;
       var rng = mulberry32(seedFromString(key));
-      var scored = eligible.map(function (idx) {
+      var scored = eligible.filter(function (idx) {
+        return !forcedBlankSet[idx];
+      }).map(function (idx) {
         var score = scoreClozeCandidate(tokens[idx], errorMap) + rng() * 0.01;
-        if (highlightSet[idx]) score += 1000;
         return { idx: idx, score: score };
       });
       scored.sort(function (a, b) { return b.score - a.score; });
       var settings = getClozeSettings(mode);
       var baseTargetCount = Math.max(1, Math.min(eligible.length, settings.maxBlanks, Math.ceil(eligible.length * settings.ratio)));
-      var targetCount = Math.max(baseTargetCount, Math.min(highlightIndices.length, settings.maxBlanks, eligible.length));
-      var picked = scored.slice(0, targetCount).map(function (s) { return s.idx; });
+      var targetCount = Math.min(eligible.length, Math.max(baseTargetCount, forcedBlankCount));
+      var picked = highlightIndices.slice();
+      var remainingCount = Math.max(0, targetCount - forcedBlankCount);
+      if (remainingCount) {
+        picked = picked.concat(scored.slice(0, remainingCount).map(function (s) { return s.idx; }));
+      }
       picked.sort(function (a, b) { return a - b; });
       return { tokens: tokens, displayTokens: displayTokens, blanks: picked, weakSet: errorMap };
     }

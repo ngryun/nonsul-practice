@@ -2099,6 +2099,36 @@
       }
       return hydrated;
     }
+    function getStoredTopicSentenceHighlights(topic) {
+      var merged = {};
+      var session = normalizeStoredPracticeSession(topic && topic.practiceSession);
+      if (session && session.sentenceHighlights) {
+        merged = normalizeStoredSentenceHighlights(session.sentenceHighlights);
+      }
+      var topicHighlights = normalizeStoredSentenceHighlights(topic && topic.sentenceHighlights);
+      for (var key in topicHighlights) {
+        if (!Object.prototype.hasOwnProperty.call(topicHighlights, key)) continue;
+        merged[key] = topicHighlights[key].slice();
+      }
+      return merged;
+    }
+    function syncTopicSentenceHighlights(topic, serializedHighlights) {
+      if (!topic) return false;
+      var nextHighlights = normalizeStoredSentenceHighlights(
+        serializedHighlights || serializeSentenceHighlightsForSession()
+      );
+      var currentHighlights = normalizeStoredSentenceHighlights(topic.sentenceHighlights);
+      if (JSON.stringify(currentHighlights) === JSON.stringify(nextHighlights)) return false;
+      topic.sentenceHighlights = nextHighlights;
+      topic.updatedAt = Date.now();
+      return true;
+    }
+    function persistSelectedTopicSentenceHighlights() {
+      var topic = getSelectedTopic();
+      if (!topic) return;
+      if (!syncTopicSentenceHighlights(topic)) return;
+      persistTopicLibrary();
+    }
     function cloneDifficultyMapForSession() {
       return normalizeStoredDifficultyMap(state.difficultyMap);
     }
@@ -2159,11 +2189,15 @@
       var topicOptions = options || {};
       var manualSourceSentences = sanitizeManualSourceSentences(topicOptions.manualSourceSentences || topicOptions.manualSentences);
       var practiceSession = normalizeStoredPracticeSession(topicOptions.practiceSession || topicOptions.session);
+      var sentenceHighlights = normalizeStoredSentenceHighlights(
+        topicOptions.sentenceHighlights || (practiceSession && practiceSession.sentenceHighlights)
+      );
       return {
         id: topicOptions.id || createTopicId(),
         title: normalizeTopicTitleValue(topicOptions.title) || getNextTopicDefaultTitle(topicOptions.topicsContext),
         sourceText: healDecimalSplitSourceText(String(topicOptions.sourceText || "")),
         manualSourceSentences: manualSourceSentences,
+        sentenceHighlights: sentenceHighlights,
         practiceSession: practiceSession,
         updatedAt: Number.isFinite(topicOptions.updatedAt) ? topicOptions.updatedAt : Date.now()
       };
@@ -2175,6 +2209,7 @@
         title: topic.title,
         sourceText: typeof topic.sourceText === "string" ? topic.sourceText : "",
         manualSourceSentences: topic.manualSourceSentences || topic.manualSentences,
+        sentenceHighlights: topic.sentenceHighlights,
         practiceSession: topic.practiceSession || topic.session,
         updatedAt: topic.updatedAt,
         topicsContext: topicsContext
@@ -2457,6 +2492,7 @@
       else set[displayIndex] = true;
       if (Object.keys(set).length) state.sentenceHighlights[key] = set;
       else delete state.sentenceHighlights[key];
+      persistSelectedTopicSentenceHighlights();
       scheduleSelectedTopicPracticeSessionSave();
     }
     function renderHistorySentenceHtml(text) {
@@ -3248,8 +3284,7 @@
       return createTopicDocumentFileStem(topic) + "." + extension;
     }
     function getTopicSentenceHighlightMapForExport(topic) {
-      var session = normalizeStoredPracticeSession(topic && topic.practiceSession);
-      return session ? normalizeStoredSentenceHighlights(session.sentenceHighlights) : {};
+      return getStoredTopicSentenceHighlights(topic);
     }
     function renderTopicDocumentSentenceHtml(text, highlightIndices) {
       var info = splitSentenceTokens(text);
@@ -3505,15 +3540,19 @@
       cancelScheduledTopicSessionSave();
       var topic = getSelectedTopic();
       if (!topic) return;
+      var highlightsChanged = syncTopicSentenceHighlights(topic);
       if (state.active) {
         var snapshot = serializeCurrentPracticeSession();
-        if (!snapshot) return;
+        if (!snapshot) {
+          if (highlightsChanged) persistTopicLibrary();
+          return;
+        }
         topic.practiceSession = snapshot;
         topic.updatedAt = Date.now();
         persistTopicLibrary();
         return;
       }
-      if (clearIfInactive && clearTopicPracticeSession(topic)) {
+      if (clearIfInactive && (clearTopicPracticeSession(topic) || highlightsChanged)) {
         persistTopicLibrary();
         updateStartButtonCopy();
       }
@@ -3826,7 +3865,7 @@
       }, 0));
       state.historyCollapsed = !!session.historyCollapsed;
       state.historyAutoScrollPending = false;
-      state.sentenceHighlights = hydrateSentenceHighlightsFromSession(session.sentenceHighlights);
+      state.sentenceHighlights = hydrateSentenceHighlightsFromSession(getStoredTopicSentenceHighlights(topic));
       state.targetSentenceView = { mode: "static", diffActualText: "" };
       state.active = true;
       state.waitingForNext = false;
@@ -5822,6 +5861,7 @@
       showCelebration();
     }
     function startPractice(){
+      var topic = getSelectedTopic();
       var sentences=splitIntoSentences(elements.sourceText.value);
       if(!sentences.length){alert("먼저 모범 답안을 붙여넣어 주세요.");return;}
       finishSentenceRecording("auto");
@@ -5834,6 +5874,7 @@
       state.currentQueue=state.sourceSentences.slice();state.retryQueue=[];
       state.currentIndex=0;state.round=1;state.totalAttempts=0;state.correctAttempts=0;state.wrongAttempts=0;
       state.committedHistory=[];state.historyAcceptedCounter=0;
+      state.sentenceHighlights=hydrateSentenceHighlightsFromSession(getStoredTopicSentenceHighlights(topic));
       state.solvedIds=new Set();state.startedAt=Date.now();state.active=true;
       state.waitingForNext=false;state.hintLevel=0;state.difficultyMap={};state.similarityLog=[];state.historyAutoScrollPending=false;
       elements.restartButton.disabled=false;

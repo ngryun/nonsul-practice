@@ -71,8 +71,16 @@
       padding: 4px 0 32px;
       margin-bottom: 8px;
     }
-    h1 {
+    .title-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4em;
       margin: 0 0 10px;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0;
       font-size: clamp(1.6rem, 2.5vw, 2.1rem);
       font-weight: 800;
       letter-spacing: -0.5px;
@@ -81,13 +89,76 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    .title-sub {
-      font-size: 0.88rem; font-weight: 400; font-style: italic;
-      color: var(--accent); letter-spacing: 0.08em;
-      margin: 2px 0 10px !important; opacity: 0.85;
+    .title-emblem {
+      width: 1.35em;
+      height: 1.35em;
+      flex-shrink: 0;
+      display: inline-flex;
+      line-height: 0;
+      font-size: clamp(1.6rem, 2.5vw, 2.1rem);
+      filter: drop-shadow(0 2px 6px rgba(242, 160, 183, 0.35));
+    }
+    .title-emblem svg { width: 100%; height: 100%; overflow: visible; display: block; }
+    .emblem-blossom,
+    .emblem-float {
+      transform-box: fill-box;
+      transform-origin: center;
+      will-change: transform, opacity;
+    }
+    .petal {
+      transform-box: fill-box;
+      transform-origin: center bottom;
+      will-change: transform;
+    }
+    .emblem-blossom { animation: emblem-breathe 7.2s ease-in-out infinite; }
+    .petal-1 { animation: petal-sway-a 4.3s ease-in-out infinite; }
+    .petal-2 { animation: petal-sway-b 5.1s ease-in-out -0.7s infinite; }
+    .petal-3 { animation: petal-sway-a 4.9s ease-in-out -1.8s infinite; }
+    .petal-4 { animation: petal-sway-b 5.6s ease-in-out -2.6s infinite; }
+    .petal-5 { animation: petal-sway-a 4.5s ease-in-out -3.3s infinite; }
+    .emblem-float-1 { animation: emblem-drift-1 7.4s ease-in-out infinite; }
+    .emblem-float-2 { animation: emblem-drift-2 8.9s ease-in-out -2.1s infinite; }
+    @keyframes emblem-breathe {
+      0%, 100% { transform: scale(1) rotate(-1deg); }
+      50%      { transform: scale(1.035) rotate(1deg); }
+    }
+    @keyframes petal-sway-a {
+      0%, 100% { transform: rotate(-4deg) scale(1); }
+      50%      { transform: rotate(5deg) scale(1.04); }
+    }
+    @keyframes petal-sway-b {
+      0%, 100% { transform: rotate(4deg) scale(1.02); }
+      50%      { transform: rotate(-5deg) scale(0.97); }
+    }
+    @keyframes emblem-drift-1 {
+      0%   { transform: translate(0, 0) rotate(-12deg); opacity: 0.7; }
+      30%  { transform: translate(2px, -2px) rotate(10deg); opacity: 1; }
+      60%  { transform: translate(4px, 1px) rotate(26deg); opacity: 0.95; }
+      100% { transform: translate(0, 0) rotate(-12deg); opacity: 0.7; }
+    }
+    @keyframes emblem-drift-2 {
+      0%   { transform: translate(0, 0) rotate(6deg); opacity: 0.5; }
+      25%  { transform: translate(-2px, 2px) rotate(-16deg); opacity: 0.85; }
+      55%  { transform: translate(-4px, 5px) rotate(-34deg); opacity: 0.95; }
+      80%  { transform: translate(-1px, 3px) rotate(-8deg); opacity: 0.7; }
+      100% { transform: translate(0, 0) rotate(6deg); opacity: 0.5; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .emblem-blossom, .petal, .emblem-float-1, .emblem-float-2 { animation: none; }
     }
     .page-header p {
       margin: 0; color: var(--muted); font-size: 0.92rem; font-weight: 300;
+    }
+    .daily-quote {
+      min-height: 1.4em;
+      letter-spacing: 0.01em;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s;
+    }
+    .daily-quote.is-ready {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     /* Source section */
@@ -1184,9 +1255,50 @@
 
   <div class="page">
     <header class="page-header">
-      <h1>생각이 피어나는 연습장</h1>
-      <p class="title-sub">🌸 벚꽃처럼</p>
-      <p>모범답안을 붙여넣으면 문장 단위로 나눕니다. 한 문장씩 읽고 기억한 뒤, 가려진 상태에서 써보세요.</p>
+      <div class="title-row">
+        <span class="title-emblem" aria-hidden="true">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="emblemPetal" x1="50%" y1="100%" x2="50%" y2="0%">
+                <stop offset="0%" stop-color="#efa5bf"/>
+                <stop offset="38%" stop-color="#fde5ed"/>
+                <stop offset="100%" stop-color="#ffffff"/>
+              </linearGradient>
+              <radialGradient id="emblemCore" cx="50%" cy="50%" r="55%">
+                <stop offset="0%" stop-color="#fcd679"/>
+                <stop offset="55%" stop-color="#e88aa2"/>
+                <stop offset="100%" stop-color="#b9536f"/>
+              </radialGradient>
+              <path id="emblemPetalShape" d="M 0 0 C -5 -4, -7.5 -14, -2.5 -20 L 0 -16 L 2.5 -20 C 7.5 -14, 5 -4, 0 0 Z"/>
+              <g id="emblemStamenUnit">
+                <line x1="0" y1="-0.8" x2="0" y2="-4.6" stroke="#cd7a94" stroke-width="0.45" stroke-linecap="round"/>
+                <circle cx="0" cy="-4.9" r="0.7" fill="#e6a831"/>
+              </g>
+            </defs>
+            <g class="emblem-blossom">
+              <g transform="translate(32 33) scale(1 0.9)">
+                <g transform="rotate(-4) scale(0.74)"><g class="petal petal-1"><use href="#emblemPetalShape" fill="url(#emblemPetal)" opacity="0.7"/></g></g>
+                <g transform="rotate(-70) scale(0.88)"><g class="petal petal-5"><use href="#emblemPetalShape" fill="url(#emblemPetal)" opacity="0.86"/></g></g>
+                <g transform="rotate(72) scale(0.92)"><g class="petal petal-2"><use href="#emblemPetalShape" fill="url(#emblemPetal)" opacity="0.94"/></g></g>
+                <g transform="rotate(-148) scale(1.08)"><g class="petal petal-4"><use href="#emblemPetalShape" fill="url(#emblemPetal)"/></g></g>
+                <g transform="rotate(152) scale(1.12)"><g class="petal petal-3"><use href="#emblemPetalShape" fill="url(#emblemPetal)"/></g></g>
+              </g>
+            </g>
+            <g transform="translate(54 14)">
+              <g class="emblem-float emblem-float-1">
+                <use href="#emblemPetalShape" fill="url(#emblemPetal)" transform="rotate(35) scale(0.48)" opacity="0.85"/>
+              </g>
+            </g>
+            <g transform="translate(9 52)">
+              <g class="emblem-float emblem-float-2">
+                <use href="#emblemPetalShape" fill="url(#emblemPetal)" transform="rotate(-40) scale(0.4)" opacity="0.7"/>
+              </g>
+            </g>
+          </svg>
+        </span>
+        <h1>벚꽃처럼 생각이 피어나는 연습장</h1>
+      </div>
+      <p class="daily-quote" id="dailyQuote">&nbsp;</p>
     </header>
 
     <!-- 연습 전: 모범답안 입력 영역 -->
@@ -1438,6 +1550,48 @@
   </div>
 
   <script>
+    // ═══════════════════════════════════════════════════════════
+    // Daily warm quote
+    // ═══════════════════════════════════════════════════════════
+    (function() {
+      var quotes = [
+        "오늘도 당신의 속도로 충분해요.",
+        "꽃이 피는 데에도 저마다의 계절이 있어요.",
+        "서두르지 않아도, 당신은 멀리 가고 있어요.",
+        "작은 한 걸음이 가장 멀리 닿습니다.",
+        "오늘 쓴 한 문장이 내일의 당신을 지탱합니다.",
+        "흔들려도 괜찮아요, 뿌리는 깊게 자라고 있어요.",
+        "느리게 피어난 꽃이 가장 오래 기억됩니다.",
+        "당신이 있는 자리, 이미 충분히 아름다워요.",
+        "포기하지 않은 오늘을 자랑스러워해도 좋아요.",
+        "작은 용기가 가장 환한 빛이 됩니다.",
+        "오늘의 수고가 내일의 꽃잎이 됩니다.",
+        "잘하고 있어요, 정말로요.",
+        "비가 온 뒤의 하늘은 더 맑게 개입니다.",
+        "지나온 모든 날들이 당신을 여기까지 데려왔어요.",
+        "아직 피지 않은 꽃도, 이미 꽃입니다.",
+        "천천히, 그러나 분명하게 나아가고 있어요.",
+        "오늘 하루, 숨 한 번 깊게 쉬어도 괜찮아요.",
+        "마음이 무거운 날엔, 스스로에게 다정해 주세요.",
+        "당신의 하루가 오늘 조금 더 다정하길.",
+        "잘 안 되는 날도, 애쓴 당신은 여전합니다.",
+        "작은 불빛도 누군가에겐 큰 길이 됩니다.",
+        "어제보다 한 걸음, 그걸로 충분해요.",
+        "봄은 결국, 모두의 창가에 닿습니다.",
+        "바람이 지나가도, 나무는 여전히 서 있어요.",
+        "꽃망울처럼, 당신의 마음도 곧 피어납니다.",
+        "오늘 당신이 건넨 말 한마디가 누군가의 봄입니다.",
+        "괜찮아요, 여기까지 온 것만으로 대단해요.",
+        "당신의 한 줄이, 오늘을 단단하게 만듭니다.",
+        "눈부시지 않아도, 당신은 이미 빛나고 있어요.",
+        "꽃잎이 떨어져도, 나무는 다시 봄을 준비합니다."
+      ];
+      var el = document.getElementById('dailyQuote');
+      if (!el) return;
+      el.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+      requestAnimationFrame(function() { el.classList.add('is-ready'); });
+    })();
+
     // ═══════════════════════════════════════════════════════════
     // Cherry Blossom Particle System (SVG + mouse wind)
     // ═══════════════════════════════════════════════════════════
@@ -5700,9 +5854,28 @@
       saveSourceDraft();
       saveManualSourceSentences(cleaned);
       refreshSourceMeta();
-      if (!state.active) {
-        state.sourceSentences = cleaned.map(function(t, i) { return { id: i + 1, text: t }; });
-        rebuildKeywordStats();
+      var previousCurrentText = (state.active && state.currentQueue[state.currentIndex])
+        ? normalizeSourceSentenceValue(state.currentQueue[state.currentIndex].text)
+        : "";
+      var previousIndex = state.currentIndex;
+      state.sourceSentences = cleaned.map(function(t, i) { return { id: i + 1, text: t }; });
+      rebuildKeywordStats();
+      if (state.active) {
+        state.currentQueue = state.sourceSentences.slice();
+        state.retryQueue = [];
+        var matchedIndex = -1;
+        if (previousCurrentText) {
+          for (var i = 0; i < state.currentQueue.length; i++) {
+            if (normalizeSourceSentenceValue(state.currentQueue[i].text) === previousCurrentText) {
+              matchedIndex = i;
+              break;
+            }
+          }
+        }
+        state.currentIndex = matchedIndex >= 0
+          ? matchedIndex
+          : Math.min(previousIndex, Math.max(0, state.currentQueue.length - 1));
+        renderCurrentSentence();
       }
       refreshProgress();
       renderSourceModalEditor();
@@ -5716,7 +5889,7 @@
         startPractice();
         return;
       }
-      if (state.active) setFeedback("모범 답안을 저장했습니다.","변경 내용은 다시 시작하면 반영됩니다.","","note");
+      if (state.active) setFeedback("모범 답안을 저장했습니다.","변경 내용이 현재 문장에 바로 반영되었습니다.","good","note");
       else setFeedback("모범 답안을 저장했습니다.","문장 구성이 업데이트되었습니다.","","note");
     }
     function showSourceModal(options) {

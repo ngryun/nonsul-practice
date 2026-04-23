@@ -4713,36 +4713,36 @@
       if (!storageKey) {
         recordingState.currentMeta = null;
         recordingState.loading = false;
-        updateSentenceRecordingButtons();
+        refreshSentenceActionButtons();
         return Promise.resolve(null);
       }
       if (!recordingState.storageSupported) {
         recordingState.currentMeta = null;
         recordingState.loading = false;
-        updateSentenceRecordingButtons();
+        refreshSentenceActionButtons();
         return Promise.resolve(null);
       }
       if (recordingState.isRecording && recordingState.recordingStorageKey === storageKey) {
         recordingState.currentMeta = null;
-        updateSentenceRecordingButtons();
+        refreshSentenceActionButtons();
         return Promise.resolve(null);
       }
       recordingState.currentMeta = null;
       recordingState.loading = true;
-      updateSentenceRecordingButtons();
+      refreshSentenceActionButtons();
       return readSentenceRecording(storageKey).then(function(record) {
         if (token !== recordingState.lookupToken || recordingState.currentStorageKey !== storageKey) return record;
         recordingState.loading = false;
         recordingState.storageError = "";
         recordingState.currentMeta = cacheSentenceRecordingMeta(storageKey, record);
-        updateSentenceRecordingButtons();
+        refreshSentenceActionButtons();
         return record;
       }).catch(function(error) {
         if (token !== recordingState.lookupToken || recordingState.currentStorageKey !== storageKey) return null;
         recordingState.loading = false;
         recordingState.currentMeta = getCachedSentenceRecordingMeta(storageKey) || null;
         recordingState.storageError = "로컬 음성 저장소를 열지 못했습니다.";
-        updateSentenceRecordingButtons();
+        refreshSentenceActionButtons();
         return null;
       });
     }

@@ -1277,6 +1277,7 @@
                   <path d="M18 6a8.5 8.5 0 0 1 0 12"></path>
                 </svg>
               </button>
+              <button id="repeatSentenceButton" class="button-secondary compact-button" type="button" aria-label="현재 문장 반복 읽기" title="현재 문장 반복 읽기" aria-pressed="false">반복</button>
               <button id="recordSentenceButton" class="button-secondary compact-button record-button" type="button" aria-label="현재 문장 녹음" title="현재 문장 녹음"></button>
               <button id="playSentenceRecordingButton" class="button-secondary icon-button" type="button" aria-label="저장된 녹음 재생" title="저장된 녹음 재생" aria-pressed="false"></button>
               <button id="deleteSentenceRecordingButton" class="button-secondary icon-button" type="button" aria-label="저장된 녹음 삭제" title="저장된 녹음 삭제"></button>
@@ -1623,6 +1624,7 @@
       sentenceActionRow: $("sentenceActionRow"),
       prevSentenceButton: $("prevSentenceButton"),
       readSentenceButton: $("readSentenceButton"),
+      repeatSentenceButton: $("repeatSentenceButton"),
       readSpeedSelect: $("readSpeedSelect"),
       memorizeBtn: $("memorizeBtn"), skipSentenceButton: $("skipSentenceButton"), memorizeMsg: $("memorizeMsg"),
       userInput: $("userInput"),
@@ -1664,6 +1666,7 @@
       voices: [],
       activeUtterance: null,
       speaking: false,
+      repeatEnabled: false,
       rate: 0.95,
       requestCounter: 0,
       pendingRequestId: 0,
@@ -4667,6 +4670,19 @@
              voices.find(function(v){return /korean|한국/i.test((v.name || "") + " " + (v.lang || ""));}) ||
              null;
     }
+    function shouldRepeatCurrentSentence(text) {
+      var current = getCurrentSentence();
+      return !!(
+        speechState.repeatEnabled &&
+        state.active &&
+        !elements.sentenceActionRow.hidden &&
+        !recordingState.isRecording &&
+        !recordingState.loading &&
+        current &&
+        current.text &&
+        current.text === text
+      );
+    }
     function stopSpeaking() {
       if (!speechState.supported) return;
       if (speechState.pendingTimer) {
@@ -4674,13 +4690,31 @@
         speechState.pendingTimer = null;
       }
       speechState.pendingRequestId = 0;
+      speechState.repeatEnabled = false;
       window.speechSynthesis.cancel();
       speechState.activeUtterance = null;
       speechState.speaking = false;
       updateReadButtonState();
     }
+    function toggleSentenceRepeatPlayback() {
+      if (!speechState.supported) {
+        setFeedback("반복 읽기를 사용할 수 없습니다.", "현재 브라우저에서 음성 읽기를 지원하지 않습니다.", "bad", "warning");
+        return;
+      }
+      if (recordingState.isRecording || recordingState.loading) return;
+      var current = getCurrentSentence();
+      if (!state.active || !current || !current.text) return;
+      if (speechState.repeatEnabled) {
+        stopSpeaking();
+        return;
+      }
+      speechState.repeatEnabled = true;
+      updateReadButtonState();
+      speakCurrentSentence(true);
+    }
     function updateReadButtonState() {
       var btn = elements.readSentenceButton;
+      var repeatBtn = elements.repeatSentenceButton;
       if (!btn) return;
       var canRead = speechState.supported && state.active && !elements.sentenceActionRow.hidden && !recordingState.isRecording && !recordingState.loading;
       btn.disabled = !canRead;
@@ -4689,9 +4723,18 @@
       btn.setAttribute("aria-pressed", speechState.speaking ? "true" : "false");
       btn.innerHTML = speechState.speaking ? ICONS.stop : ICONS.speaker;
       btn.title = speechState.supported
-        ? (speechState.speaking ? "읽기 멈추기 (V)" : "제시문장 읽기 (V)")
+        ? (speechState.speaking ? (speechState.repeatEnabled ? "반복 읽기 멈추기 (V)" : "읽기 멈추기 (V)") : "제시문장 읽기 (V)")
         : "읽기 미지원";
       btn.setAttribute("aria-label", btn.title);
+      if (repeatBtn) {
+        repeatBtn.disabled = !canRead;
+        repeatBtn.classList.toggle("is-active", speechState.repeatEnabled);
+        repeatBtn.setAttribute("aria-pressed", speechState.repeatEnabled ? "true" : "false");
+        repeatBtn.title = speechState.supported
+          ? (speechState.repeatEnabled ? "반복 읽기 멈추기" : "현재 문장 반복 읽기")
+          : "반복 읽기 미지원";
+        repeatBtn.setAttribute("aria-label", repeatBtn.title);
+      }
     }
     function speakCurrentSentence(forceRestart) {
       if (!speechState.supported) {
@@ -4742,12 +4785,17 @@
         utterance.onend = function () {
           if (speechState.activeUtterance !== utterance) return;
           speechState.activeUtterance = null;
+          if (shouldRepeatCurrentSentence(curNow.text)) {
+            speakCurrentSentence(true);
+            return;
+          }
           speechState.speaking = false;
           updateReadButtonState();
         };
         utterance.onerror = function () {
           if (speechState.activeUtterance !== utterance) return;
           speechState.activeUtterance = null;
+          speechState.repeatEnabled = false;
           speechState.speaking = false;
           updateReadButtonState();
         };
@@ -5799,6 +5847,7 @@
     elements.restartButton.addEventListener("click",startPractice);
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
     elements.readSentenceButton.addEventListener("click",speakCurrentSentence);
+    elements.repeatSentenceButton.addEventListener("click",toggleSentenceRepeatPlayback);
     elements.recordSentenceButton.addEventListener("click",toggleSentenceRecording);
     elements.playSentenceRecordingButton.addEventListener("click",playSentenceRecording);
     elements.deleteSentenceRecordingButton.addEventListener("click",deleteSentenceRecording);

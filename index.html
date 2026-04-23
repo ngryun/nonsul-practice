@@ -1277,9 +1277,9 @@
                   <path d="M18 6a8.5 8.5 0 0 1 0 12"></path>
                 </svg>
               </button>
-              <button id="repeatSentenceButton" class="button-secondary compact-button" type="button" aria-label="현재 문장 반복 읽기" title="현재 문장 반복 읽기" aria-pressed="false">반복</button>
               <button id="recordSentenceButton" class="button-secondary compact-button record-button" type="button" aria-label="현재 문장 녹음" title="현재 문장 녹음"></button>
               <button id="playSentenceRecordingButton" class="button-secondary icon-button" type="button" aria-label="저장된 녹음 재생" title="저장된 녹음 재생" aria-pressed="false"></button>
+              <button id="repeatSentenceButton" class="button-secondary compact-button" type="button" aria-label="저장된 녹음 반복 재생" title="저장된 녹음 반복 재생" aria-pressed="false">반복</button>
               <button id="deleteSentenceRecordingButton" class="button-secondary icon-button" type="button" aria-label="저장된 녹음 삭제" title="저장된 녹음 삭제"></button>
               <button id="skipSentenceButton" class="button-secondary icon-button" type="button" aria-label="다음 문장으로 가기" title="다음 문장으로 가기">&rarr;</button>
               <div class="speech-rate-control">
@@ -1666,7 +1666,6 @@
       voices: [],
       activeUtterance: null,
       speaking: false,
-      repeatEnabled: false,
       rate: 0.95,
       requestCounter: 0,
       pendingRequestId: 0,
@@ -1696,7 +1695,8 @@
       pendingMetaByStorageKey: {},
       playbackAudio: null,
       playbackUrl: "",
-      playbackStorageKey: ""
+      playbackStorageKey: "",
+      playbackRepeatStorageKey: ""
     };
     var topicAudioState = {
       playbackLoading: false,
@@ -3792,6 +3792,10 @@
       var currentKey = getCurrentSentenceRecordingStorageKey();
       return !!(recordingState.playbackAudio && currentKey && recordingState.playbackStorageKey === currentKey);
     }
+    function isCurrentSentencePlaybackRepeating() {
+      var currentKey = getCurrentSentenceRecordingStorageKey();
+      return !!(currentKey && recordingState.playbackRepeatStorageKey === currentKey);
+    }
     function openSentenceRecordingDb() {
       if (!recordingState.storageSupported) return Promise.reject(new Error("indexeddb unavailable"));
       if (!recordingState.dbPromise) {
@@ -3869,6 +3873,7 @@
       refreshHistoryRecordingUi();
     }
     function stopSentencePlayback() {
+      recordingState.playbackRepeatStorageKey = "";
       clearSentencePlaybackState(false);
     }
     function getSentenceRecorderMimeType() {
@@ -4284,15 +4289,17 @@
     function updateSentenceRecordingButtons() {
       var recordBtn = elements.recordSentenceButton;
       var playBtn = elements.playSentenceRecordingButton;
+      var repeatBtn = elements.repeatSentenceButton;
       var deleteBtn = elements.deleteSentenceRecordingButton;
       var hint = elements.recordingHint;
-      if (!recordBtn || !playBtn || !deleteBtn || !hint) return;
+      if (!recordBtn || !playBtn || !repeatBtn || !deleteBtn || !hint) return;
       var controlsVisible = state.active && !elements.sentenceActionRow.hidden;
       var currentKey = getCurrentSentenceRecordingStorageKey();
       var supportMessage = getSentenceRecordingSupportMessage();
       var isRecording = !!(recordingState.isRecording && currentKey && recordingState.recordingStorageKey === currentKey);
       var isStopping = !!(recordingState.stopRequested && currentKey && recordingState.recordingStorageKey === currentKey);
       var isPlaying = !!(recordingState.playbackAudio && currentKey && recordingState.playbackStorageKey === currentKey);
+      var isRepeating = isCurrentSentencePlaybackRepeating();
       var hasRecording = !!(recordingState.currentMeta && recordingState.currentMeta.storageKey === currentKey);
       var isBusy = recordingState.loading;
 
@@ -4313,6 +4320,12 @@
       playBtn.setAttribute("aria-label", playBtn.title);
       playBtn.setAttribute("aria-pressed", isPlaying ? "true" : "false");
 
+      repeatBtn.classList.toggle("is-active", isRepeating);
+      repeatBtn.disabled = !controlsVisible || !!supportMessage || isBusy || !hasRecording || isRecording;
+      repeatBtn.title = supportMessage || (isRepeating ? "반복 재생 멈추기" : "저장된 녹음 반복 재생");
+      repeatBtn.setAttribute("aria-label", repeatBtn.title);
+      repeatBtn.setAttribute("aria-pressed", isRepeating ? "true" : "false");
+
       deleteBtn.innerHTML = ICONS.trash;
       deleteBtn.disabled = !controlsVisible || !!supportMessage || isBusy || !hasRecording || isRecording;
       deleteBtn.title = supportMessage || "저장된 녹음 삭제";
@@ -4324,6 +4337,7 @@
       else if (isStopping) hint.textContent = "녹음을 저장하는 중입니다.";
       else if (isBusy) hint.textContent = "녹음 정보를 준비하는 중입니다.";
       else if (isRecording) hint.textContent = "녹음 중 " + formatRecordingDuration(recordingState.elapsedMs) + " · 이 문장 음성은 이 브라우저에만 저장됩니다.";
+      else if (isRepeating) hint.textContent = "저장된 녹음 반복 재생 중 · 멈출 때까지 같은 음성을 계속 재생합니다.";
       else if (hasRecording) hint.textContent = "저장된 녹음 " + formatRecordingDuration(recordingState.currentMeta.durationMs || 0) + " · 이 브라우저에만 저장됩니다.";
       else hint.textContent = "녹음은 이 브라우저에만 저장됩니다.";
     }
@@ -4530,13 +4544,22 @@
         setFeedback("녹음을 시작하지 못했습니다.", message, "bad", "warning");
       });
     }
-    function toggleSentenceRecordingPlaybackByStorageKey(storageKey, emptyMessage) {
+    function toggleSentenceRecordingPlaybackByStorageKey(storageKey, emptyMessage, options) {
+      var config = options || {};
+      var repeatPlayback = !!config.repeatPlayback;
       if (!state.active || !storageKey || recordingState.loading) return;
       if (recordingState.isRecording) {
         setFeedback("녹음 중에는 재생할 수 없습니다.", "먼저 현재 녹음을 저장한 뒤 다시 재생해 주세요.", "", "warning");
         return;
       }
       if (recordingState.playbackAudio && recordingState.playbackStorageKey === storageKey) {
+        if (repeatPlayback) {
+          recordingState.playbackRepeatStorageKey = storageKey;
+          recordingState.playbackAudio.loop = true;
+          updateSentenceRecordingButtons();
+          refreshHistoryRecordingUi();
+          return;
+        }
         stopSentencePlayback();
         return;
       }
@@ -4545,6 +4568,7 @@
       readSentenceRecording(storageKey).then(function(record) {
         if (!record || !record.blob) {
           recordingState.loading = false;
+          recordingState.playbackRepeatStorageKey = "";
           recordingState.currentMeta = cacheSentenceRecordingMeta(storageKey, null);
           refreshSentenceActionButtons();
           updateSentenceRecordingButtons();
@@ -4555,25 +4579,30 @@
         stopSpeaking();
         stopTopicRecordingPlayback();
         clearSentencePlaybackState(true);
+        recordingState.playbackRepeatStorageKey = repeatPlayback ? storageKey : "";
         var url = URL.createObjectURL(record.blob);
         var audio = new Audio(url);
+        audio.loop = repeatPlayback;
         recordingState.playbackAudio = audio;
         recordingState.playbackUrl = url;
         recordingState.playbackStorageKey = storageKey;
         recordingState.loading = false;
         audio.onended = function() { clearSentencePlaybackState(false); };
         audio.onerror = function() {
+          recordingState.playbackRepeatStorageKey = "";
           clearSentencePlaybackState(false);
           setFeedback("녹음을 재생하지 못했습니다.", "브라우저가 저장된 음성을 열 수 없습니다.", "bad", "warning");
         };
         updateSentenceRecordingButtons();
         refreshHistoryRecordingUi();
         return audio.play().catch(function() {
+          recordingState.playbackRepeatStorageKey = "";
           clearSentencePlaybackState(false);
           setFeedback("녹음을 재생하지 못했습니다.", "브라우저의 오디오 재생이 차단되었습니다.", "bad", "warning");
         });
       }).catch(function() {
         recordingState.loading = false;
+        recordingState.playbackRepeatStorageKey = "";
         updateSentenceRecordingButtons();
         refreshHistoryRecordingUi();
         setFeedback("녹음을 불러오지 못했습니다.", "브라우저 로컬 저장소에서 음성을 읽지 못했습니다.", "bad", "warning");
@@ -4583,6 +4612,17 @@
       var current = getCurrentSentence();
       if (!state.active || !current || !current.text) return;
       toggleSentenceRecordingPlaybackByStorageKey(getSentenceRecordingStorageKey(current), "먼저 이 문장을 녹음해 주세요.");
+    }
+    function toggleSentenceRecordingRepeatPlayback() {
+      var current = getCurrentSentence();
+      if (!state.active || !current || !current.text) return;
+      var storageKey = getSentenceRecordingStorageKey(current);
+      if (!storageKey) return;
+      if (recordingState.playbackRepeatStorageKey === storageKey) {
+        stopSentencePlayback();
+        return;
+      }
+      toggleSentenceRecordingPlaybackByStorageKey(storageKey, "먼저 이 문장을 녹음해 주세요.", { repeatPlayback: true });
     }
     function playPreferredSentenceAudio() {
       var current = getCurrentSentence();
@@ -4670,19 +4710,6 @@
              voices.find(function(v){return /korean|한국/i.test((v.name || "") + " " + (v.lang || ""));}) ||
              null;
     }
-    function shouldRepeatCurrentSentence(text) {
-      var current = getCurrentSentence();
-      return !!(
-        speechState.repeatEnabled &&
-        state.active &&
-        !elements.sentenceActionRow.hidden &&
-        !recordingState.isRecording &&
-        !recordingState.loading &&
-        current &&
-        current.text &&
-        current.text === text
-      );
-    }
     function stopSpeaking() {
       if (!speechState.supported) return;
       if (speechState.pendingTimer) {
@@ -4690,31 +4717,13 @@
         speechState.pendingTimer = null;
       }
       speechState.pendingRequestId = 0;
-      speechState.repeatEnabled = false;
       window.speechSynthesis.cancel();
       speechState.activeUtterance = null;
       speechState.speaking = false;
       updateReadButtonState();
     }
-    function toggleSentenceRepeatPlayback() {
-      if (!speechState.supported) {
-        setFeedback("반복 읽기를 사용할 수 없습니다.", "현재 브라우저에서 음성 읽기를 지원하지 않습니다.", "bad", "warning");
-        return;
-      }
-      if (recordingState.isRecording || recordingState.loading) return;
-      var current = getCurrentSentence();
-      if (!state.active || !current || !current.text) return;
-      if (speechState.repeatEnabled) {
-        stopSpeaking();
-        return;
-      }
-      speechState.repeatEnabled = true;
-      updateReadButtonState();
-      speakCurrentSentence(true);
-    }
     function updateReadButtonState() {
       var btn = elements.readSentenceButton;
-      var repeatBtn = elements.repeatSentenceButton;
       if (!btn) return;
       var canRead = speechState.supported && state.active && !elements.sentenceActionRow.hidden && !recordingState.isRecording && !recordingState.loading;
       btn.disabled = !canRead;
@@ -4723,18 +4732,9 @@
       btn.setAttribute("aria-pressed", speechState.speaking ? "true" : "false");
       btn.innerHTML = speechState.speaking ? ICONS.stop : ICONS.speaker;
       btn.title = speechState.supported
-        ? (speechState.speaking ? (speechState.repeatEnabled ? "반복 읽기 멈추기 (V)" : "읽기 멈추기 (V)") : "제시문장 읽기 (V)")
+        ? (speechState.speaking ? "읽기 멈추기 (V)" : "제시문장 읽기 (V)")
         : "읽기 미지원";
       btn.setAttribute("aria-label", btn.title);
-      if (repeatBtn) {
-        repeatBtn.disabled = !canRead;
-        repeatBtn.classList.toggle("is-active", speechState.repeatEnabled);
-        repeatBtn.setAttribute("aria-pressed", speechState.repeatEnabled ? "true" : "false");
-        repeatBtn.title = speechState.supported
-          ? (speechState.repeatEnabled ? "반복 읽기 멈추기" : "현재 문장 반복 읽기")
-          : "반복 읽기 미지원";
-        repeatBtn.setAttribute("aria-label", repeatBtn.title);
-      }
     }
     function speakCurrentSentence(forceRestart) {
       if (!speechState.supported) {
@@ -4785,17 +4785,12 @@
         utterance.onend = function () {
           if (speechState.activeUtterance !== utterance) return;
           speechState.activeUtterance = null;
-          if (shouldRepeatCurrentSentence(curNow.text)) {
-            speakCurrentSentence(true);
-            return;
-          }
           speechState.speaking = false;
           updateReadButtonState();
         };
         utterance.onerror = function () {
           if (speechState.activeUtterance !== utterance) return;
           speechState.activeUtterance = null;
-          speechState.repeatEnabled = false;
           speechState.speaking = false;
           updateReadButtonState();
         };
@@ -5847,7 +5842,7 @@
     elements.restartButton.addEventListener("click",startPractice);
     elements.prevSentenceButton.addEventListener("click",moveToPreviousSentence);
     elements.readSentenceButton.addEventListener("click",speakCurrentSentence);
-    elements.repeatSentenceButton.addEventListener("click",toggleSentenceRepeatPlayback);
+    elements.repeatSentenceButton.addEventListener("click",toggleSentenceRecordingRepeatPlayback);
     elements.recordSentenceButton.addEventListener("click",toggleSentenceRecording);
     elements.playSentenceRecordingButton.addEventListener("click",playSentenceRecording);
     elements.deleteSentenceRecordingButton.addEventListener("click",deleteSentenceRecording);

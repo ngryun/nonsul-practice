@@ -2355,6 +2355,20 @@
       }
       return { display: parts, grading: gradingTokens, map: indexMap, candidates: candidates };
     }
+    function splitDisplayTokenAffixes(token) {
+      var value = String(token || "");
+      if (!value) return { leading: "", core: "", trailing: "" };
+      var start = 0;
+      var end = value.length;
+      while (start < end && !normalizeForGrading(value.charAt(start))) start++;
+      while (end > start && !normalizeForGrading(value.charAt(end - 1))) end--;
+      if (start >= end) return { leading: "", core: value, trailing: "" };
+      return {
+        leading: value.slice(0, start),
+        core: value.slice(start, end),
+        trailing: value.slice(end)
+      };
+    }
     function buildKeywordStats(sentences) {
       var docs = sentences || [];
       var docFreq = {};
@@ -2725,21 +2739,25 @@
         if (i > 0) elements.clozeDisplay.appendChild(document.createTextNode(" "));
         var normTok = cloze.tokens[i];
         var dispTok = displayTokens[i] || normTok;
+        var affixes = splitDisplayTokenAffixes(dispTok);
+        var coreDisplay = affixes.core || dispTok || normTok;
         if (cloze.blanks.indexOf(i) >= 0) {
-          var len = Array.from(dispTok).length;
+          var len = Array.from(coreDisplay).length;
           var input = document.createElement("input");
           input.type = "text";
           input.className = "cloze-input" + (cloze.weakSet[normTok] ? " weak" : "");
           input.setAttribute("data-idx", String(blankPos));
           input.setAttribute("data-answer", normTok);       // normalized — for grading
-          input.setAttribute("data-display", dispTok);      // original — shown in answer chip
+          input.setAttribute("data-display", coreDisplay);  // visible answer text
           input.setAttribute("autocomplete", "off");
           input.setAttribute("autocorrect", "off");
           input.setAttribute("autocapitalize", "off");
           input.setAttribute("spellcheck", "false");
           input.placeholder = new Array(len + 1).join("＿");
           input.style.width = Math.max(72, len * 28 + 20) + "px";
+          if (affixes.leading) elements.clozeDisplay.appendChild(document.createTextNode(affixes.leading));
           elements.clozeDisplay.appendChild(input);
+          if (affixes.trailing) elements.clozeDisplay.appendChild(document.createTextNode(affixes.trailing));
           blankPos++;
         } else {
           elements.clozeDisplay.appendChild(document.createTextNode(dispTok));

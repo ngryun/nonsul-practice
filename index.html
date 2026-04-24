@@ -2351,7 +2351,7 @@
         startedAt: Number.isFinite(session.startedAt) ? session.startedAt : Date.now(),
         committedHistory: normalizeCommittedHistory(session.committedHistory),
         historyAcceptedCounter: Number.isFinite(session.historyAcceptedCounter) ? Math.max(0, Math.floor(session.historyAcceptedCounter)) : 0,
-        historyCollapsed: !!session.historyCollapsed,
+        historyCollapsed: session.historyCollapsed !== false,
         sentenceHighlights: normalizeStoredSentenceHighlights(session.sentenceHighlights),
         waitingForNext: !!session.waitingForNext,
         hintLevel: Number.isFinite(session.hintLevel) ? Math.max(0, Math.floor(session.hintLevel)) : 0,

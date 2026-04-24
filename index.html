@@ -3630,14 +3630,14 @@
           officeMarkup +
           '<style>' +
             '@page{size:A4;margin:14mm 12mm;}' +
-            'html,body{margin:0;padding:0;background:#fff;color:#171717;font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;}' +
+            'html,body{margin:0;padding:0;background:#fff;color:#171717;font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}' +
             'body{padding:18px;}' +
             '.export-shell{max-width:900px;margin:0 auto;}' +
             '.export-title{margin:0 0 14px;font-size:26px;font-weight:800;line-height:1.25;letter-spacing:-0.04em;border-bottom:2px solid #111;padding-bottom:10px;}' +
             '.export-list{' + (format === "pdf" ? 'column-count:2;column-gap:24px;' : '') + '}' +
             '.export-sentence-line{margin:0 0 8px;padding:0 0 8px;font-size:15px;line-height:1.65;letter-spacing:-0.01em;word-break:keep-all;border-bottom:1px solid #ececec;break-inside:avoid;page-break-inside:avoid;}' +
-            '.export-highlight{padding:0 2px;background:#ffec73;box-shadow:inset 0 -0.08em 0 rgba(175,132,0,0.2);}' +
-            '@media print{body{padding:0;}.export-shell{max-width:none;}.export-sentence-line{font-size:14px;line-height:1.58;margin-bottom:6px;padding-bottom:6px;}}' +
+            '.export-highlight{padding:0 2px;border-radius:2px;background:#ffec73;box-shadow:inset 0 -0.08em 0 rgba(175,132,0,0.2);text-decoration:underline solid rgba(255,236,115,0.98);text-decoration-thickness:0.72em;text-underline-offset:-0.26em;text-decoration-skip-ink:none;-webkit-box-decoration-break:clone;box-decoration-break:clone;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}' +
+            '@media print{html,body,.export-shell,.export-list,.export-sentence-line,.export-highlight{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}body{padding:0;}.export-shell{max-width:none;}.export-sentence-line{font-size:14px;line-height:1.58;margin-bottom:6px;padding-bottom:6px;}}' +
             '@media (max-width:720px){body{padding:14px;}.export-title{font-size:22px;}.export-list{column-count:1;}.export-sentence-line{font-size:14px;line-height:1.6;}}' +
           '</style>' +
           printScript +

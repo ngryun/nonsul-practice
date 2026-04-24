@@ -299,8 +299,7 @@
     .source-modal-editor {
       display: grid;
       gap: 10px;
-      max-height: 50vh;
-      overflow-y: auto;
+      overflow: visible;
     }
     .source-modal-editor[hidden] { display: none; }
     .source-modal-empty {
@@ -340,7 +339,8 @@
       background: var(--soft);
       font-size: 0.92rem;
       line-height: 1.55;
-      resize: vertical;
+      resize: none;
+      overflow: hidden;
     }
     .source-modal-item-tools {
       display: flex;
@@ -5970,12 +5970,22 @@
       requestAnimationFrame(function() {
         var input = elements.sourceModalEditor.querySelector('[data-sentence-input="' + index + '"]');
         if (!input) return;
+        resizeSourceModalTextarea(input);
         input.focus();
         if (typeof caret === "number") {
           var pos = Math.max(0, Math.min(caret, input.value.length));
           try { input.setSelectionRange(pos, pos); } catch (e) {}
         }
       });
+    }
+    function resizeSourceModalTextarea(input) {
+      if (!input) return;
+      input.style.height = "auto";
+      input.style.height = Math.max(72, input.scrollHeight) + "px";
+    }
+    function resizeSourceModalTextareas() {
+      var inputs = elements.sourceModalEditor.querySelectorAll(".source-modal-item-input");
+      for (var i = 0; i < inputs.length; i++) resizeSourceModalTextarea(inputs[i]);
     }
     function renderSourceModalEditor() {
       elements.sourceModalEditor.replaceChildren();
@@ -6028,6 +6038,7 @@
         frag.appendChild(item);
       }
       elements.sourceModalEditor.appendChild(frag);
+      resizeSourceModalTextareas();
       syncSourceModalMeta();
     }
     function findSentenceSplitPoint(value, preferred) {
@@ -6137,8 +6148,10 @@
       state.sourceModalDirty = false;
       renderSourceModalEditor();
       elements.sourceModal.hidden = false;
+      resizeSourceModalTextareas();
       requestAnimationFrame(function(){
         elements.sourceModal.classList.add("visible");
+        resizeSourceModalTextareas();
         if (focusIndex >= 0 && state.sourceModalSentences.length) {
           focusSourceModalSentence(Math.min(focusIndex, state.sourceModalSentences.length - 1), 0);
         }
@@ -6334,10 +6347,42 @@
       setFeedback("이전 문장을 불러왔습니다.","선택한 문장을 제시 문장으로 다시 보여줍니다.","","previous");
       renderCurrentSentence();
     }
+    function isLastCurrentQueueSentence(){
+      return !!(state.currentQueue.length && state.currentIndex >= state.currentQueue.length - 1);
+    }
+    function hasCurrentAnswerDraft(){
+      if (state.currentStage === "cloze" && state.clozeData && elements.sentenceCard.classList.contains("cloze-active")) {
+        var inputs = getClozeInputs();
+        for (var i = 0; i < inputs.length; i++) {
+          if (normalizeForCompare(inputs[i].value || "")) return true;
+        }
+        return false;
+      }
+      return !!normalizeForCompare(elements.userInput.value || "");
+    }
+    function focusCurrentAnswerTarget(){
+      if (state.currentStage === "cloze" && state.clozeData && elements.sentenceCard.classList.contains("cloze-active")) {
+        var inputs = getClozeInputs();
+        if (inputs[0]) inputs[0].focus();
+        return;
+      }
+      if (!elements.userInput.disabled) {
+        elements.userInput.focus();
+        return;
+      }
+      if (!elements.memorizeBtn.disabled) elements.memorizeBtn.focus();
+    }
+    function shouldBlockEmptyLastSentenceAdvance(){
+      if(!state.active||state.waitingForNext||!isLastCurrentQueueSentence()||hasCurrentAnswerDraft())return false;
+      setFeedback("마지막 문장입니다.","아무것도 입력하지 않은 상태에서는 연습을 끝내지 않습니다. 먼저 입력 후 채점해 주세요.","","warning");
+      focusCurrentAnswerTarget();
+      return true;
+    }
     function skipCurrentSentence(){
       if(!state.active||state.waitingForNext)return;
       var cur=state.currentQueue[state.currentIndex];
       if(!cur)return;
+      if(shouldBlockEmptyLastSentenceAdvance())return;
       state.solvedIds.add(cur.id);
       setFeedback("다음 문장으로 넘어갑니다.","연습이 필요 없는 문장은 바로 건너뛸 수 있습니다.","","next");
       scheduleSelectedTopicPracticeSessionSave();
@@ -6350,6 +6395,7 @@
     function moveToNextSentence(){
       if(state.gradedAt && Date.now()-state.gradedAt<280)return;
       if(state.active && state.currentQueue.length && state.currentIndex>=state.currentQueue.length-1 && state.retryQueue.length===0){
+        if(!state.waitingForNext&&shouldBlockEmptyLastSentenceAdvance())return;
         if(state.waitingForNext)completePracticeFromCurrentSentence();
         else finishPractice(false);
         return;
@@ -6798,6 +6844,7 @@
       var input = e.target.closest("[data-sentence-input]");
       if (!input) return;
       updateSourceModalSentence(parseInt(input.getAttribute("data-sentence-input"), 10), input.value);
+      resizeSourceModalTextarea(input);
     });
     elements.sourceModalEditor.addEventListener("click",function(e){
       var button = e.target.closest("[data-modal-action]");

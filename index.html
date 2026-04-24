@@ -1909,6 +1909,8 @@
       currentMeta: null,
       metaByStorageKey: {},
       pendingMetaByStorageKey: {},
+      fallbackStorageKeysByStorageKey: {},
+      legacyTextKeyByStorageKey: {},
       playbackAudio: null,
       playbackUrl: "",
       playbackStorageKey: "",
@@ -2045,9 +2047,46 @@
     function getSentenceKey(text) {
       return hashText(normalizeForGrading(text));
     }
-    function getSentenceRecordingStorageKey(sentence) {
+    function getSentenceRecordingTopicKey(sentence) {
+      var topicId = sentence && typeof sentence.topicId === "string" && sentence.topicId
+        ? sentence.topicId
+        : state.selectedTopicId || "";
+      return topicId ? hashText(topicId) : "default";
+    }
+    function getLegacySentenceRecordingStorageKey(sentence) {
       if (!sentence || typeof sentence.id !== "number" || !sentence.text) return "";
       return String(sentence.id) + ":" + getSentenceKey(sentence.text);
+    }
+    function registerSentenceRecordingLegacyLookup(storageKey, sentence, legacyKey) {
+      if (!storageKey || !sentence || !sentence.text || typeof recordingState === "undefined") return;
+      recordingState.fallbackStorageKeysByStorageKey[storageKey] = legacyKey && legacyKey !== storageKey ? [legacyKey] : [];
+      recordingState.legacyTextKeyByStorageKey[storageKey] = getSentenceKey(sentence.text);
+    }
+    function getSentenceRecordingStorageKey(sentence) {
+      if (!sentence || !sentence.text) return "";
+      var textKey = getSentenceKey(sentence.text);
+      var storageKey = "topic:" + getSentenceRecordingTopicKey(sentence) + ":" + textKey;
+      registerSentenceRecordingLegacyLookup(storageKey, sentence, getLegacySentenceRecordingStorageKey(sentence));
+      return storageKey;
+    }
+    function getSentenceRecordingFallbackKeys(storageKey) {
+      if (!storageKey || !recordingState.fallbackStorageKeysByStorageKey[storageKey]) return [];
+      return recordingState.fallbackStorageKeysByStorageKey[storageKey].slice();
+    }
+    function getSentenceRecordingLegacyTextKey(storageKey) {
+      if (!storageKey) return "";
+      if (recordingState.legacyTextKeyByStorageKey[storageKey]) return recordingState.legacyTextKeyByStorageKey[storageKey];
+      var match = /^topic:[^:]+:([^:]+)$/.exec(storageKey);
+      return match ? match[1] : "";
+    }
+    function isLegacySentenceRecordingStorageKeyForText(storageKey, textKey) {
+      if (!storageKey || !textKey || !/^\d+:/.test(storageKey)) return false;
+      return storageKey.slice(storageKey.indexOf(":") + 1) === textKey;
+    }
+    function isLegacySentenceRecordingRecordForText(record, textKey) {
+      if (!record || !textKey || !isLegacySentenceRecordingStorageKeyForText(record.storageKey, textKey)) return false;
+      if (!record.sentenceText) return true;
+      return getSentenceKey(record.sentenceText) === textKey;
     }
     function normalizeSourceText(text) {
       return String(text || "").replace(/\r\n/g, "\n").trim();
@@ -2272,10 +2311,17 @@
         return normalizeSourceSentenceValue(sentence && typeof sentence === "object" ? sentence.text : sentence);
       }).filter(Boolean).join("\n"));
     }
+    function createSentenceRecord(text, index, topicId) {
+      return {
+        id: index + 1,
+        text: text,
+        topicId: topicId || state.selectedTopicId || ""
+      };
+    }
     function createSentenceRecordsFromText(text) {
       var sentences = splitIntoSentences(text || "");
       return sentences.map(function(sentence, index) {
-        return { id: index + 1, text: sentence };
+        return createSentenceRecord(sentence, index);
       });
     }
     function buildSentenceLookup(sentences) {
@@ -3540,6 +3586,8 @@
       recordingState.currentMeta = null;
       recordingState.metaByStorageKey = {};
       recordingState.pendingMetaByStorageKey = {};
+      recordingState.fallbackStorageKeysByStorageKey = {};
+      recordingState.legacyTextKeyByStorageKey = {};
     }
     function createBackupFileName() {
       var stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -4294,10 +4342,11 @@
     function getCurrentSentenceRecordingStorageKey() {
       return getSentenceRecordingStorageKey(getCurrentSentence());
     }
-    function normalizeSentenceRecordingMeta(record) {
+    function normalizeSentenceRecordingMeta(record, storageKey) {
       if (!record || !record.storageKey) return null;
       return {
-        storageKey: record.storageKey,
+        storageKey: storageKey || record.storageKey,
+        actualStorageKey: record.storageKey,
         durationMs: record.durationMs || 0,
         updatedAt: record.updatedAt || 0,
         mimeType: record.mimeType || ""
@@ -4310,7 +4359,7 @@
     }
     function cacheSentenceRecordingMeta(storageKey, record) {
       if (!storageKey) return null;
-      var meta = normalizeSentenceRecordingMeta(record);
+      var meta = normalizeSentenceRecordingMeta(record, storageKey);
       recordingState.metaByStorageKey[storageKey] = meta;
       return meta;
     }
@@ -4323,19 +4372,17 @@
         if (getCachedSentenceRecordingMeta(storageKey) !== undefined) continue;
         if (recordingState.pendingMetaByStorageKey[storageKey]) continue;
         recordingState.pendingMetaByStorageKey[storageKey] = true;
-        lookups.push(
-          readSentenceRecording(storageKey)
+        lookups.push((function(key) {
+          return readSentenceRecording(key)
             .then(function(record) {
-              if (record && record.storageKey) cacheSentenceRecordingMeta(record.storageKey, record);
+              if (record && record.storageKey) cacheSentenceRecordingMeta(key, record);
             })
             .catch(function() {})
-            .finally((function(key) {
-              return function() {
-                if (getCachedSentenceRecordingMeta(key) === undefined) cacheSentenceRecordingMeta(key, null);
-                delete recordingState.pendingMetaByStorageKey[key];
-              };
-            })(storageKey))
-        );
+            .finally(function() {
+              if (getCachedSentenceRecordingMeta(key) === undefined) cacheSentenceRecordingMeta(key, null);
+              delete recordingState.pendingMetaByStorageKey[key];
+            });
+        })(storageKey));
       }
       if (!lookups.length) return;
       Promise.all(lookups).then(function() {
@@ -4397,9 +4444,46 @@
         return new Promise(function(resolve, reject) {
           var tx = db.transaction(SENTENCE_RECORDING_STORE, "readonly");
           var store = tx.objectStore(SENTENCE_RECORDING_STORE);
-          var request = store.get(storageKey);
-          request.onsuccess = function() { resolve(request.result || null); };
-          request.onerror = function() { reject(request.error || new Error("recording read failed")); };
+          var keys = [storageKey].concat(getSentenceRecordingFallbackKeys(storageKey));
+          var legacyTextKey = getSentenceRecordingLegacyTextKey(storageKey);
+          var bestLegacyRecord = null;
+          function scanLegacyRecordsByText() {
+            if (!legacyTextKey) {
+              resolve(null);
+              return;
+            }
+            var cursorRequest = store.openCursor();
+            cursorRequest.onsuccess = function(event) {
+              var cursor = event.target.result;
+              if (!cursor) {
+                resolve(bestLegacyRecord);
+                return;
+              }
+              var record = cursor.value;
+              if (isLegacySentenceRecordingRecordForText(record, legacyTextKey) &&
+                (!bestLegacyRecord || (record.updatedAt || 0) > (bestLegacyRecord.updatedAt || 0))) {
+                bestLegacyRecord = record;
+              }
+              cursor.continue();
+            };
+            cursorRequest.onerror = function() { reject(cursorRequest.error || new Error("recording read failed")); };
+          }
+          function readNextKey(index) {
+            if (index >= keys.length) {
+              scanLegacyRecordsByText();
+              return;
+            }
+            var request = store.get(keys[index]);
+            request.onsuccess = function() {
+              if (request.result) {
+                resolve(request.result);
+                return;
+              }
+              readNextKey(index + 1);
+            };
+            request.onerror = function() { reject(request.error || new Error("recording read failed")); };
+          }
+          readNextKey(0);
         });
       });
     }
@@ -4415,13 +4499,32 @@
       });
     }
     function removeSentenceRecording(storageKey) {
+      if (!storageKey) return Promise.resolve();
       return openSentenceRecordingDb().then(function(db) {
         return new Promise(function(resolve, reject) {
           var tx = db.transaction(SENTENCE_RECORDING_STORE, "readwrite");
           var store = tx.objectStore(SENTENCE_RECORDING_STORE);
-          var request = store.delete(storageKey);
-          request.onsuccess = function() { resolve(); };
-          request.onerror = function() { reject(request.error || new Error("recording delete failed")); };
+          var keys = [storageKey].concat(getSentenceRecordingFallbackKeys(storageKey));
+          var seen = {};
+          var legacyTextKey = getSentenceRecordingLegacyTextKey(storageKey);
+          tx.oncomplete = function() { resolve(); };
+          tx.onerror = function() { reject(tx.error || new Error("recording delete failed")); };
+          for (var i = 0; i < keys.length; i++) {
+            if (!keys[i] || seen[keys[i]]) continue;
+            seen[keys[i]] = true;
+            store.delete(keys[i]);
+          }
+          if (legacyTextKey) {
+            var cursorRequest = store.openCursor();
+            cursorRequest.onsuccess = function(event) {
+              var cursor = event.target.result;
+              if (!cursor) return;
+              var record = cursor.value;
+              if (isLegacySentenceRecordingRecordForText(record, legacyTextKey)) cursor.delete();
+              cursor.continue();
+            };
+            cursorRequest.onerror = function() { reject(cursorRequest.error || new Error("recording delete failed")); };
+          }
         });
       });
     }
@@ -4496,7 +4599,7 @@
     }
     function createTopicSentenceRecordsForAudio(topic) {
       return getTopicSentenceTexts(topic, getTopicSourceConfig(topic)).map(function(text, index) {
-        return { id: index + 1, text: text };
+        return createSentenceRecord(text, index, topic && topic.id);
       });
     }
     function isTopicRecordingPlaybackActive(topicId) {
@@ -5936,7 +6039,7 @@
         ? normalizeSourceSentenceValue(state.currentQueue[state.currentIndex].text)
         : "";
       var previousIndex = state.currentIndex;
-      state.sourceSentences = cleaned.map(function(t, i) { return { id: i + 1, text: t }; });
+      state.sourceSentences = cleaned.map(function(t, i) { return createSentenceRecord(t, i); });
       rebuildKeywordStats();
       if (state.active) {
         state.currentQueue = state.sourceSentences.slice();
@@ -6280,7 +6383,7 @@
       stopTopicRecordingPlayback();
       stopSpeaking();
       stopTimer();hideCelebration();
-      state.sourceSentences=sentences.map(function(t,i){return{id:i+1,text:t}});
+      state.sourceSentences=sentences.map(function(t,i){return createSentenceRecord(t,i);});
       rebuildKeywordStats();
       state.currentQueue=state.sourceSentences.slice();state.retryQueue=[];
       state.currentIndex=0;state.round=1;state.totalAttempts=0;state.correctAttempts=0;state.wrongAttempts=0;

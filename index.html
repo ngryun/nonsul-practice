@@ -396,6 +396,7 @@
       box-shadow: var(--shadow-sm);
       padding: 20px;
     }
+    .practice-section[hidden] { display: none; }
 
     /* Shared controls */
     label { display: block; margin-bottom: 8px; font-size: 0.88rem; font-weight: 600; color: var(--text); }
@@ -1382,7 +1383,7 @@
     </details>
 
     <!-- 연습 영역 -->
-    <section class="practice-section">
+    <section id="practiceSection" class="practice-section" hidden>
       <div class="practice-strip">
         <div class="practice-strip-top">
           <div class="practice-strip-stats">
@@ -1820,6 +1821,7 @@
       sentenceCount: $("sentenceCount"), charCountWithSpaces: $("charCountWithSpaces"), charCountWithoutSpaces: $("charCountWithoutSpaces"),
       progressPosition: $("progressPosition"), progressDone: $("progressDone"),
       progressFill: $("progressFill"),
+      practiceSection: $("practiceSection"),
       practiceLayout: $("practiceLayout"), practiceMain: $("practiceMain"),
       historyToggleButton: $("historyToggleButton"),
       historyPanel: $("historyPanel"), historyContent: $("historyContent"), historyEmpty: $("historyEmpty"),
@@ -3402,7 +3404,10 @@
       );
     }
     function openTopicManager() {
-      if (state.active) saveSelectedTopicPracticeSession(false);
+      if (state.active) {
+        saveSelectedTopicPracticeSession(false);
+        resetPracticeStateToIdle();
+      }
       saveSourceDraft();
       elements.sourceSection.hidden = false;
       elements.sourceTrigger.hidden = true;
@@ -5676,6 +5681,7 @@
     function stopTimer(){if(state.timerId){clearInterval(state.timerId);state.timerId=null;}}
     function startTimer(){stopTimer();}
     function setPracticeAuxVisibility(isPracticeActive){
+      if (elements.practiceSection) elements.practiceSection.hidden = !isPracticeActive;
       elements.heatmapPanel.hidden = !!isPracticeActive;
       elements.footerNote.hidden = !!isPracticeActive;
       if (elements.sentenceEditButton) elements.sentenceEditButton.hidden = !isPracticeActive;
@@ -6268,12 +6274,17 @@
       state.solvedIds.add(cur.id);
       setFeedback("다음 문장으로 넘어갑니다.","연습이 필요 없는 문장은 바로 건너뛸 수 있습니다.","","next");
       scheduleSelectedTopicPracticeSessionSave();
+      if(state.currentQueue.length && state.currentIndex>=state.currentQueue.length-1 && state.retryQueue.length===0){
+        finishPractice(false);
+        return;
+      }
       moveToNextSentence();
     }
     function moveToNextSentence(){
       if(state.gradedAt && Date.now()-state.gradedAt<280)return;
       if(state.active && state.currentQueue.length && state.currentIndex>=state.currentQueue.length-1 && state.retryQueue.length===0){
-        completePracticeFromCurrentSentence();
+        if(state.waitingForNext)completePracticeFromCurrentSentence();
+        else finishPractice(false);
         return;
       }
       finishSentenceRecording("auto");
@@ -6377,7 +6388,7 @@
       saveSelectedTopicPracticeSession(false);
       showCelebration();
     }
-    function finishPractice(){
+    function finishPractice(showCelebrationModal){
       finishSentenceRecording("auto");
       stopSentencePlayback();
       stopTopicRecordingPlayback();
@@ -6399,7 +6410,7 @@
       setPracticeAuxVisibility(false);
       elements.sourceSection.hidden=false;elements.sourceTrigger.hidden=true;
       saveSelectedTopicPracticeSession(true);
-      showCelebration();
+      if(showCelebrationModal!==false)showCelebration();
     }
     function startPractice(){
       var topic = getSelectedTopic();

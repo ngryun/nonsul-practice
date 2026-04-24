@@ -1175,9 +1175,19 @@
     .celebration-content {
       background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
       padding: 48px 40px; text-align: center; max-width: 440px; width: 90%;
+      position: relative;
       transform: scale(0.9) translateY(20px); transition: transform var(--transition-slow);
     }
     .celebration-overlay.visible .celebration-content { transform: scale(1) translateY(0); }
+    .celebration-dismiss {
+      position: absolute; top: 14px; right: 14px;
+      width: 36px; height: 36px; border: none; border-radius: 999px;
+      background: transparent; color: var(--muted); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 1.35rem; line-height: 1;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+    .celebration-dismiss:hover { background: var(--line); color: var(--text); }
     .celebration-icon { font-size: 4rem; margin-bottom: 12px; line-height: 1; }
     .celebration-content h2 {
       margin: 0 0 8px; font-size: 1.5rem; font-weight: 800;
@@ -1538,13 +1548,14 @@
   <!-- 축하 오버레이 -->
   <div id="celebrationOverlay" class="celebration-overlay" hidden>
     <div class="celebration-content">
+      <button id="celebrationDismiss" class="celebration-dismiss" type="button" aria-label="완료 모달 닫기" title="닫기">&times;</button>
       <div class="celebration-icon">&#127881;</div>
       <h2>축하합니다!</h2>
       <p>모든 문장을 완벽하게 따라 썼습니다.</p>
       <div id="celebrationStats" class="celebration-stats"></div>
       <div class="celebration-buttons">
-        <button id="celebrationRestart" class="button-primary">다시 연습하기</button>
-        <button id="celebrationClose" class="button-secondary">결과 확인</button>
+        <button id="celebrationRestart" class="button-primary" type="button">다시 연습하기</button>
+        <button id="celebrationClose" class="button-secondary" type="button">결과 확인</button>
       </div>
     </div>
   </div>
@@ -1839,6 +1850,7 @@
       difficultyRow: $("difficultyRow"), difficultyToggleButton: $("difficultyToggleButton"),
       compareCard: $("compareCard"), expectedDiff: $("expectedDiff"), actualDiff: $("actualDiff"),
       celebrationOverlay: $("celebrationOverlay"), celebrationStats: $("celebrationStats"),
+      celebrationDismiss: $("celebrationDismiss"),
       celebrationRestart: $("celebrationRestart"), celebrationClose: $("celebrationClose")
     };
 
@@ -3684,7 +3696,7 @@
       setFeedback(
         "PDF 인쇄 창을 열었습니다.",
         prepared.data.highlightedTokenCount
-          ? "브라우저 인쇄 화면에서 'PDF로 저장'을 선택하면 형광펜 표시가 적용된 문서를 저장할 수 있습니다."
+          ? "브라우저 인쇄 화면에서 'PDF로 저장'을 선택하면 형광펜 표시가 적용된 문서를 저장할 수 있습니다. 형광펜이 보이지 않으면 인쇄 옵션에서 '배경 그래픽'을 켜세요."
           : "브라우저 인쇄 화면에서 'PDF로 저장'을 선택하면 현재 주제를 문서로 저장할 수 있습니다.",
         "",
         "success"
@@ -6591,6 +6603,7 @@
       toggleCurrentSentenceHard();
     });
     elements.celebrationRestart.addEventListener("click",function(){hideCelebration();startPractice();});
+    elements.celebrationDismiss.addEventListener("click",hideCelebration);
     elements.celebrationClose.addEventListener("click",hideCelebration);
     elements.userInput.addEventListener("keydown",function(e){
       if(e.isComposing||e.keyCode===229)return;

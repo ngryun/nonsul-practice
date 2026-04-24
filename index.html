@@ -521,6 +521,21 @@
       white-space: pre-wrap;
       word-break: keep-all;
     }
+    .history-entry[data-history-sentence] {
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .history-entry[data-history-sentence]:hover {
+      border-color: rgba(212,132,154,0.32);
+      background: rgba(255,241,245,0.9);
+      color: var(--text);
+    }
+    .history-entry[data-history-sentence]:focus-visible {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+      color: var(--text);
+    }
     .history-entry + .history-entry { margin-top: 8px; }
     .history-entry-body {
       flex: 1 1 auto;
@@ -2106,7 +2121,7 @@
     }
     function shouldKeepSentenceBoundary(current, next) {
       if (!current || !next) return true;
-      if (/[!?！？:：]["'"')\]]*$/.test(current)) return true;
+      if (/[!?！？:：]["'’”)\]」』）》〉）]*$/.test(current)) return true;
       if (/^(?:[-•·]|[0-9]+[.)])/.test(next)) return true;
       return false;
     }
@@ -2678,6 +2693,23 @@
       }
       return { core: value, particle: "" };
     }
+    function splitQuotedKoreanParticleSuffix(token) {
+      var value = String(token || "");
+      for (var i = 0; i < CLOZE_VISIBLE_PARTICLE_SUFFIXES.length; i++) {
+        var suffix = CLOZE_VISIBLE_PARTICLE_SUFFIXES[i];
+        if (value.length <= suffix.length || value.slice(-suffix.length) !== suffix) continue;
+        var beforeSuffix = value.slice(0, -suffix.length);
+        var quoteStart = beforeSuffix.length;
+        while (quoteStart > 0 && /["'’”\]）)」』》〉]/.test(beforeSuffix.charAt(quoteStart - 1))) quoteStart--;
+        if (quoteStart === beforeSuffix.length) continue;
+        var core = beforeSuffix.slice(0, quoteStart);
+        var closing = beforeSuffix.slice(quoteStart);
+        if (!/^[가-힣]+$/.test(core)) continue;
+        if (suffix.length === 1 && Array.from(core).length < 2) continue;
+        return { core: core, trailing: closing + suffix };
+      }
+      return { core: value, trailing: "" };
+    }
     function splitDisplayTokenAffixes(token) {
       var value = String(token || "");
       if (!value) return { leading: "", core: "", trailing: "" };
@@ -2686,7 +2718,14 @@
       while (start < end && !normalizeForGrading(value.charAt(start))) start++;
       while (end > start && !normalizeForGrading(value.charAt(end - 1))) end--;
       if (start >= end) return { leading: "", core: value, trailing: "" };
-      var particleSplit = splitKoreanParticleSuffix(value.slice(start, end));
+      var inner = value.slice(start, end);
+      var particleSplit = splitKoreanParticleSuffix(inner);
+      if (!particleSplit.particle) {
+        var quotedParticleSplit = splitQuotedKoreanParticleSuffix(inner);
+        if (quotedParticleSplit.trailing) {
+          particleSplit = { core: quotedParticleSplit.core, particle: quotedParticleSplit.trailing };
+        }
+      }
       return {
         leading: value.slice(0, start),
         core: particleSplit.core,
@@ -3288,6 +3327,9 @@
     function isSourceSentenceBoundaryChar(ch) {
       return /[.!?。！？…]/.test(ch);
     }
+    function isSourceClosingWrapperChar(ch) {
+      return /["'’”)\]」』）》〉）]/.test(ch);
+    }
     function isSourceDecimalPoint(line, index) {
       if (line.charAt(index) !== ".") return false;
       return /\d/.test(line.charAt(index - 1)) && /\d/.test(line.charAt(index + 1));
@@ -3304,7 +3346,7 @@
         while (end < line.length && isSourceSentenceBoundaryChar(line.charAt(end)) && !isSourceDecimalPoint(line, end)) {
           end++;
         }
-        while (end < line.length && /["')\]」』）》〉）]/.test(line.charAt(end))) {
+        while (end < line.length && isSourceClosingWrapperChar(line.charAt(end))) {
           end++;
         }
 
@@ -3335,7 +3377,7 @@
     }
     function normalizeForCompare(t) { return t.replace(/\s+/g," ").trim(); }
     function normalizeForGrading(t) {
-      return t.replace(/[.,;:!?·…'"`‘’‚‛＇""\-–—()（）\[\]「」『』《》〈〉]/g,"").replace(/\s+/g," ").trim();
+      return t.replace(/[.,;:!?·…'"`‘’“”‚‛＇\-–—()（）\[\]「」『』《》〈〉]/g,"").replace(/\s+/g," ").trim();
     }
     function levenshteinDistance(a,b) {
       var ac=Array.from(a),bc=Array.from(b),al=ac.length,bl=bc.length;
@@ -5536,10 +5578,9 @@
     function getHistoryEntries() {
       if (!state.sourceSentences.length) return [];
       if (!state.active) return state.sourceSentences.slice();
-      var cur = state.currentQueue[state.currentIndex];
-      if (!cur || typeof cur.id !== "number") return [];
-      return state.sourceSentences.filter(function(sentence) {
-        return sentence.id < cur.id;
+      var end = Math.max(0, Math.min(state.currentIndex, state.currentQueue.length));
+      return state.currentQueue.slice(0, end).filter(function(sentence) {
+        return sentence && typeof sentence.id === "number";
       });
     }
     function updateHistoryToggleButton(hasEntries, showPanel) {
@@ -5610,7 +5651,11 @@
           (isPlaying ? ICONS.pause : ICONS.play) +
           '</button>'
         : '<span class="history-entry-audio-status' + statusClass + '">' + statusLabel + '</span>';
-      return '<div class="history-entry' + (isLatest ? ' is-latest' : '') + (isHard ? ' is-hard' : '') + '">' +
+      return '<div class="history-entry' + (isLatest ? ' is-latest' : '') + (isHard ? ' is-hard' : '') + '"' +
+        ' data-history-sentence="' + String(entry.id) + '"' +
+        ' tabindex="0"' +
+        ' aria-label="' + escapeHtml("이전 문장 보기: " + entry.text) + '"' +
+        ' title="이 문장을 제시 문장으로 보기">' +
         '<div class="history-entry-body">' +
           '<div class="history-entry-text">' + renderHistorySentenceHtml(entry.text) + '</div>' +
         '</div>' +
@@ -6267,6 +6312,28 @@
       setFeedback("이전 문장으로 돌아갑니다.","앞 문장을 다시 읽고 연습할 수 있습니다.","","previous");
       renderCurrentSentence();
     }
+    function findCurrentQueueIndexBySentenceId(sentenceId){
+      if(!Number.isFinite(sentenceId))return -1;
+      for(var i=0;i<state.currentQueue.length;i++){
+        if(state.currentQueue[i]&&state.currentQueue[i].id===sentenceId)return i;
+      }
+      return -1;
+    }
+    function showHistorySentenceAsCurrent(sentenceId){
+      if(!state.active)return;
+      var targetIndex=findCurrentQueueIndexBySentenceId(sentenceId);
+      if(targetIndex<0||targetIndex===state.currentIndex)return;
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
+      stopSpeaking();
+      hideComparison();hideHint();hideDifficultyRow();state.hintLevel=0;
+      state.waitingForNext=false;state.gradedAt=0;
+      elements.nextButton.disabled=true;elements.retryButton.disabled=true;
+      state.historyAutoScrollPending=false;
+      state.currentIndex=targetIndex;
+      setFeedback("이전 문장을 불러왔습니다.","선택한 문장을 제시 문장으로 다시 보여줍니다.","","previous");
+      renderCurrentSentence();
+    }
     function skipCurrentSentence(){
       if(!state.active||state.waitingForNext)return;
       var cur=state.currentQueue[state.currentIndex];
@@ -6691,8 +6758,21 @@
         return;
       }
       var button = e.target.closest("[data-history-play]");
-      if (!button) return;
-      playHistorySentenceRecording(button.getAttribute("data-history-play") || "");
+      if (button) {
+        playHistorySentenceRecording(button.getAttribute("data-history-play") || "");
+        return;
+      }
+      var entry = e.target.closest("[data-history-sentence]");
+      if (!entry) return;
+      showHistorySentenceAsCurrent(parseInt(entry.getAttribute("data-history-sentence"), 10));
+    });
+    elements.historyContent.addEventListener("keydown",function(e){
+      if(e.key!=="Enter"&&e.key!==" ")return;
+      if(e.target.closest("button"))return;
+      var entry=e.target.closest("[data-history-sentence]");
+      if(!entry)return;
+      e.preventDefault();
+      showHistorySentenceAsCurrent(parseInt(entry.getAttribute("data-history-sentence"),10));
     });
     elements.historyToggleButton.addEventListener("click",toggleHistoryPanel);
     elements.stageToggleButton.addEventListener("click",toggleStage);

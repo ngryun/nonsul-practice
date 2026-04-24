@@ -466,6 +466,53 @@
       align-items: start;
     }
     .practice-main { min-width: 0; }
+    .previous-sentence-preview {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      width: 100%;
+      margin: 0 0 10px;
+      padding: 8px 12px;
+      border: 1px solid rgba(212,132,154,0.16);
+      border-left: 3px solid rgba(212,132,154,0.45);
+      border-radius: var(--radius-sm);
+      background: rgba(247,243,239,0.7);
+      color: var(--muted);
+      font-family: 'Noto Serif KR', "AppleMyungjo","Nanum Myeongjo",serif;
+      text-align: left;
+      cursor: pointer;
+      transition: background var(--transition-fast), border-color var(--transition-fast);
+    }
+    .previous-sentence-preview[hidden] { display: none; }
+    .previous-sentence-preview:hover,
+    .previous-sentence-preview:focus-visible {
+      background: rgba(247,243,239,0.95);
+      border-color: rgba(212,132,154,0.32);
+      outline: none;
+    }
+    .previous-sentence-label {
+      flex: 0 0 auto;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      color: rgba(124,92,106,0.85);
+      text-transform: none;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(212,132,154,0.12);
+      font-family: var(--font-sans, system-ui, sans-serif);
+    }
+    .previous-sentence-text {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      color: rgba(70,50,58,0.78);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: keep-all;
+    }
     .history-panel {
       margin: 0;
       border: 1px solid var(--line);
@@ -1437,6 +1484,10 @@
         </aside>
 
         <div id="practiceMain" class="practice-main">
+          <button id="previousSentencePreview" class="previous-sentence-preview" type="button" hidden aria-label="바로 이전 문장으로 돌아가 다시 연습">
+            <span class="previous-sentence-label">이전</span>
+            <span id="previousSentenceText" class="previous-sentence-text"></span>
+          </button>
           <div class="sentence-card animate-in" id="sentenceCard">
             <div class="sentence-card-head">
               <div class="sentence-card-head-main">
@@ -1840,6 +1891,7 @@
       practiceLayout: $("practiceLayout"), practiceMain: $("practiceMain"),
       historyToggleButton: $("historyToggleButton"),
       historyPanel: $("historyPanel"), historyContent: $("historyContent"), historyEmpty: $("historyEmpty"),
+      previousSentencePreview: $("previousSentencePreview"), previousSentenceText: $("previousSentenceText"),
       sentenceCard: $("sentenceCard"), targetSentence: $("targetSentence"),
       clozeDisplay: $("clozeDisplay"), stageBadge: $("stageBadge"),
       sentenceEditButton: $("sentenceEditButton"),
@@ -1881,7 +1933,7 @@
       manualSourceSentences: null,
       sourceModalSentences: [], sourceModalDirty: false,
       enterAdvanceLocked: false,
-      historyCollapsed: false,
+      historyCollapsed: true,
       historyAutoScrollPending: false,
       sentenceHighlights: {},
       targetSentenceView: { mode: "static", diffActualText: "" },
@@ -4056,7 +4108,7 @@
       state.startedAt = null;
       state.committedHistory = [];
       state.historyAcceptedCounter = 0;
-      state.historyCollapsed = false;
+      state.historyCollapsed = true;
       state.historyAutoScrollPending = false;
       state.sentenceHighlights = {};
       state.targetSentenceView = { mode: "static", diffActualText: "" };
@@ -5675,8 +5727,23 @@
         '</div>' +
       '</div>';
     }
+    function renderPreviousSentencePreview(entries) {
+      if (!elements.previousSentencePreview || !elements.previousSentenceText) return;
+      var list = entries || getHistoryEntries();
+      var prev = list.length ? list[list.length - 1] : null;
+      if (!prev || !state.active) {
+        elements.previousSentencePreview.hidden = true;
+        elements.previousSentencePreview.removeAttribute("data-history-sentence");
+        elements.previousSentenceText.textContent = "";
+        return;
+      }
+      elements.previousSentenceText.textContent = prev.text || "";
+      elements.previousSentencePreview.setAttribute("data-history-sentence", String(prev.id));
+      elements.previousSentencePreview.hidden = false;
+    }
     function renderHistoryPanel() {
       var entries = getHistoryEntries();
+      renderPreviousSentencePreview(entries);
       var shouldShow = entries.length > 0 && !state.historyCollapsed;
       updateHistoryToggleButton(entries.length > 0, shouldShow);
       if (elements.historyPanel) elements.historyPanel.hidden = !shouldShow;
@@ -6821,6 +6888,13 @@
       showHistorySentenceAsCurrent(parseInt(entry.getAttribute("data-history-sentence"),10));
     });
     elements.historyToggleButton.addEventListener("click",toggleHistoryPanel);
+    if (elements.previousSentencePreview) {
+      elements.previousSentencePreview.addEventListener("click", function() {
+        var raw = elements.previousSentencePreview.getAttribute("data-history-sentence");
+        var id = parseInt(raw, 10);
+        if (Number.isFinite(id)) showHistorySentenceAsCurrent(id);
+      });
+    }
     elements.stageToggleButton.addEventListener("click",toggleStage);
     elements.sentenceEditButton.addEventListener("click",openCurrentSentenceEditor);
     elements.heatmapList.addEventListener("click",function(e){

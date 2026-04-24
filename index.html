@@ -2244,7 +2244,7 @@
         currentClozeMode: session.currentClozeMode === "assist" || session.currentClozeMode === "review" ? session.currentClozeMode : null,
         clozePassedForCurrent: !!session.clozePassedForCurrent,
         gradedAt: Number.isFinite(session.gradedAt) ? session.gradedAt : 0,
-        viewMode: ["ready", "memorize", "cloze-entry", "cloze-reviewed", "reviewed"].indexOf(session.viewMode) >= 0 ? session.viewMode : "ready",
+        viewMode: ["ready", "memorize", "cloze-entry", "cloze-reviewed", "cloze-passed", "reviewed"].indexOf(session.viewMode) >= 0 ? session.viewMode : "ready",
         userInputValue: typeof session.userInputValue === "string" ? session.userInputValue : "",
         clozeInputs: Array.isArray(session.clozeInputs) ? session.clozeInputs.map(function(value) { return typeof value === "string" ? value : ""; }) : [],
         feedback: normalizeStoredFeedback(session.feedback),
@@ -2345,7 +2345,8 @@
     function getCurrentPracticeViewMode() {
       if (!state.active) return "ready";
       if (state.currentStage === "cloze" && elements.sentenceCard.classList.contains("cloze-active")) {
-        return state.waitingForNext ? "cloze-reviewed" : "cloze-entry";
+        if (!state.waitingForNext) return "cloze-entry";
+        return state.clozePassedForCurrent ? "cloze-passed" : "cloze-reviewed";
       }
       if (elements.sentenceCard.classList.contains("memorize")) return "memorize";
       if (state.waitingForNext) return "reviewed";
@@ -3975,7 +3976,7 @@
     function applyRestoredSentenceView(cur, session) {
       var viewMode = session && session.viewMode ? session.viewMode : "ready";
       var hasClozeStage = state.currentStage === "cloze" && !!state.clozeData;
-      if ((viewMode === "cloze-entry" || viewMode === "cloze-reviewed") && !hasClozeStage) viewMode = "ready";
+      if ((viewMode === "cloze-entry" || viewMode === "cloze-reviewed" || viewMode === "cloze-passed") && !hasClozeStage) viewMode = "ready";
       if (viewMode === "memorize" && state.currentStage !== "full") viewMode = "ready";
       elements.userInput.value = session.userInputValue || "";
       hideComparison();
@@ -4038,6 +4039,36 @@
         elements.nextButton.disabled = true;
         elements.retryButton.disabled = false;
         showDifficultyRow(cur.id);
+      } else if (viewMode === "cloze-passed") {
+        renderClozeDisplay(state.clozeData);
+        applyRestoredClozeInputValues(session.clozeInputs);
+        clearClozeMarks();
+        var passedResult = gradeClozeInline();
+        for (var j = 0; j < passedResult.details.length; j++) {
+          var passedDetail = passedResult.details[j];
+          if (passedDetail.ok) {
+            passedDetail.input.classList.add("correct");
+            passedDetail.input.disabled = true;
+          } else {
+            passedDetail.input.classList.add("wrong");
+            var passedAnswer = document.createElement("span");
+            passedAnswer.className = "cloze-answer";
+            passedAnswer.textContent = passedDetail.input.getAttribute("data-display") || passedDetail.expected;
+            passedDetail.input.parentNode.insertBefore(passedAnswer, passedDetail.input.nextSibling);
+          }
+        }
+        elements.sentenceCard.classList.remove("memorize");
+        elements.sentenceCard.classList.add("cloze-active", "cloze-locked");
+        document.body.classList.add("cloze-mode");
+        elements.sentenceActionRow.hidden = false;
+        elements.memorizeMsg.textContent = "정답입니다. '다시'로 빈칸을 한 번 더 풀거나, '전체로'를 눌러 전체 받아쓰기로 바꿀 수 있습니다.";
+        elements.userInput.disabled = true;
+        elements.checkButton.disabled = true;
+        elements.hintButton.disabled = true;
+        state.waitingForNext = true;
+        elements.nextButton.disabled = false;
+        elements.retryButton.disabled = false;
+        showDifficultyRow(cur.id);
       } else if (viewMode === "reviewed") {
         revealSentence();
         elements.userInput.value = session.userInputValue || "";
@@ -4070,6 +4101,8 @@
       else if (viewMode === "cloze-entry") {
         var firstInput = elements.clozeDisplay.querySelector(".cloze-input");
         if (firstInput) firstInput.focus();
+      } else if (viewMode === "cloze-passed" && !elements.retryButton.disabled) {
+        elements.retryButton.focus();
       } else if (state.waitingForNext && elements.nextButton.disabled && !elements.retryButton.disabled) {
         elements.retryButton.focus();
       } else if (state.waitingForNext && !elements.nextButton.disabled) elements.nextButton.focus();
@@ -5960,6 +5993,7 @@
       stopSentencePlayback();
       stopSpeaking();
       if (state.currentStage === "cloze" && state.clozeData) {
+        state.clozePassedForCurrent = false;
         renderClozeDisplay(state.clozeData);
         elements.sentenceCard.classList.remove("memorize");
         elements.sentenceCard.classList.add("cloze-active");
@@ -6016,6 +6050,7 @@
           inputs[i].disabled = false;
           if (!firstWrong && !isClozeInputCorrect(inputs[i])) firstWrong = inputs[i];
         }
+        state.clozePassedForCurrent = false;
         state.waitingForNext = false;
         elements.nextButton.disabled = true; elements.retryButton.disabled = true;
         elements.checkButton.disabled = false;
@@ -6216,6 +6251,7 @@
     }
 
     function submitClozeAnswer(cur, raw){
+      state.clozePassedForCurrent = false;
       clearClozeMarks();
       var result = gradeClozeInline();
       if (result.total === 0) {
@@ -6247,26 +6283,21 @@
         state.clozePassedForCurrent = true;
         setFeedback(
           "빈칸 모두 정답! (" + result.correct + "/" + result.total + ")",
-          "전체 받아쓰기로 이어가려면 '다 읽었어요'를, 바로 다음 문장으로 넘어가려면 '다음 문장'을 누르세요.",
+          "자동으로 전체 받아쓰기로 바꾸지 않았습니다. '다시'로 빈칸을 더 연습하거나, '전체로'를 눌러 직접 전환할 수 있습니다.",
           "good", "success"
         );
-        state.currentStage = "full"; state.clozeData = null; state.currentClozeMode = null;
-        elements.sentenceCard.classList.remove("cloze-active", "cloze-locked");
-        document.body.classList.remove("cloze-mode");
         elements.sentenceActionRow.hidden = false;
-        elements.memorizeMsg.textContent = "같은 문장을 전체로 써 볼 차례입니다. 읽은 뒤 가리고 쓰세요.";
-        elements.userInput.value = "";
-        elements.userInput.placeholder = "현재 문장을 그대로 입력하세요.";
+        elements.memorizeMsg.textContent = "정답입니다. '다시'로 빈칸을 한 번 더 풀거나, '전체로'를 눌러 전체 받아쓰기로 바꿀 수 있습니다.";
         elements.hintButton.disabled = true;
         state.gradedAt = Date.now();
-        state.waitingForNext = false;
+        state.waitingForNext = true;
         elements.nextButton.disabled = false;
-        elements.retryButton.disabled = true;
+        elements.retryButton.disabled = false;
         showDifficultyRow(cur.id);
         updateStageBadge();
         updateStageToggleButton();
         scheduleSelectedTopicPracticeSessionSave();
-        elements.memorizeBtn.focus();
+        elements.retryButton.focus();
       } else {
         setFeedback(
           "빈칸 " + result.correct + "/" + result.total + " 정답",

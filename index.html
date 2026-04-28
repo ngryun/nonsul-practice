@@ -375,6 +375,35 @@
     .source-modal-meta {
       display: flex; gap: 16px; margin-top: 12px; color: var(--muted); font-size: 0.85rem;
     }
+    .recording-export-form {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--soft);
+    }
+    .recording-export-form label {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .recording-export-form input {
+      width: 160px;
+      min-height: 40px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+    .recording-export-form input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
 
     /* "모범 답안 보기" trigger */
     .source-trigger {
@@ -1279,6 +1308,7 @@
     @media (max-width: 600px) {
       .page { width: calc(100% - 24px); margin: 20px auto 24px; }
       .source-section,.practice-section { padding: 18px; }
+      .recording-export-form input { width: 100%; }
       .target-sentence { font-size: 1.15rem; }
       .button-row { flex-direction: column; }
       .button-row button { width: 100%; min-height: 44px; }
@@ -1405,6 +1435,7 @@
         <button id="saveTopicButton" class="button-secondary" type="button">저장하기</button>
         <button id="playTopicRecordingsButton" class="button-secondary" type="button">주제 녹음 이어듣기</button>
         <button id="exportTopicRecordingsButton" class="button-secondary" type="button">주제 녹음 WAV 내보내기</button>
+        <button id="exportAllTopicRecordingsButton" class="button-secondary" type="button">전체 주제 녹음 WAV 내보내기</button>
         <button id="exportTopicPdfButton" class="button-secondary" type="button">형광펜 PDF 내보내기</button>
         <button id="exportTopicWordButton" class="button-secondary" type="button">형광펜 Word 내보내기</button>
         <button id="exportBackupButton" class="button-secondary" type="button">백업 내보내기</button>
@@ -1608,6 +1639,27 @@
         <button id="sourceModalCancel" class="button-secondary" type="button">취소</button>
         <button id="sourceModalSave" class="button-secondary" type="button">저장</button>
         <button id="sourceModalApply" class="button-primary" type="button">저장 후 시작</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 전체 주제 녹음 내보내기 모달 -->
+  <div id="allTopicExportModal" class="source-modal" hidden>
+    <div class="source-modal-body" role="dialog" aria-modal="true" aria-labelledby="allTopicExportTitle">
+      <div class="source-modal-header">
+        <h2 id="allTopicExportTitle">전체 주제 녹음 내보내기</h2>
+        <div class="source-modal-actions">
+          <button id="allTopicExportClose" class="source-modal-close" type="button">&times;</button>
+        </div>
+      </div>
+      <p class="source-modal-note">녹음이 있는 주제와 문장만 순서대로 모아 하나의 WAV 파일로 저장합니다.</p>
+      <div class="recording-export-form">
+        <label for="allTopicRecordingGapInput">문장 간 딜레이(초)</label>
+        <input id="allTopicRecordingGapInput" type="number" min="0" max="10" step="0.1" value="0.35" inputmode="decimal">
+      </div>
+      <div class="source-modal-footer">
+        <button id="allTopicExportCancel" class="button-secondary" type="button">취소</button>
+        <button id="allTopicExportConfirm" class="button-primary" type="button">WAV 내보내기</button>
       </div>
     </div>
   </div>
@@ -1871,6 +1923,7 @@
       topicNewButton: $("topicNewButton"), topicDeleteButton: $("topicDeleteButton"),
       saveTopicButton: $("saveTopicButton"),
       playTopicRecordingsButton: $("playTopicRecordingsButton"), exportTopicRecordingsButton: $("exportTopicRecordingsButton"),
+      exportAllTopicRecordingsButton: $("exportAllTopicRecordingsButton"),
       exportTopicPdfButton: $("exportTopicPdfButton"), exportTopicWordButton: $("exportTopicWordButton"),
       exportBackupButton: $("exportBackupButton"), importBackupButton: $("importBackupButton"),
       backupFileInput: $("backupFileInput"),
@@ -1882,6 +1935,9 @@
       sourceModalEmpty: $("sourceModalEmpty"),
       sourceModalCount: $("sourceModalCount"), sourceModalRetry: $("sourceModalRetry"),
       sourceModalCancel: $("sourceModalCancel"), sourceModalSave: $("sourceModalSave"), sourceModalApply: $("sourceModalApply"),
+      allTopicExportModal: $("allTopicExportModal"), allTopicExportClose: $("allTopicExportClose"),
+      allTopicExportCancel: $("allTopicExportCancel"), allTopicExportConfirm: $("allTopicExportConfirm"),
+      allTopicRecordingGapInput: $("allTopicRecordingGapInput"),
       shareToPhoneButton: $("shareToPhoneButton"), practiceShareButton: $("practiceShareButton"),
       startButton: $("startButton"), restartButton: $("restartButton"),
       sentenceCount: $("sentenceCount"), charCountWithSpaces: $("charCountWithSpaces"), charCountWithoutSpaces: $("charCountWithoutSpaces"),
@@ -1988,11 +2044,16 @@
     var topicAudioState = {
       playbackLoading: false,
       exportLoading: false,
+      exportMode: "",
       playbackAudio: null,
       playbackUrl: "",
       playbackTopicId: "",
       playbackQueue: [],
       playbackIndex: 0,
+      playbackGapMs: 350,
+      announcingTitle: false,
+      announceRequestId: 0,
+      announcedTopicKeys: {},
       gapTimerId: null,
       requestToken: 0
     };
@@ -2030,6 +2091,7 @@
     var AUTO_MERGE_FOLLOWUP_MAX_WORDS = 10;
     var AUTO_MERGE_COMBINED_MAX_CHARS = 68;
     var AUTO_MERGE_COMBINED_MAX_WORDS = 18;
+    var TOPIC_RECORDING_GAP_KEY = "nonsul-practice/topic-recording-gap-ms";
     var TOPIC_RECORDING_GAP_MS = 350;
     var KEYWORD_STOPWORDS = {
       "은": true, "는": true, "이": true, "가": true, "을": true, "를": true,
@@ -2351,7 +2413,7 @@
         startedAt: Number.isFinite(session.startedAt) ? session.startedAt : Date.now(),
         committedHistory: normalizeCommittedHistory(session.committedHistory),
         historyAcceptedCounter: Number.isFinite(session.historyAcceptedCounter) ? Math.max(0, Math.floor(session.historyAcceptedCounter)) : 0,
-        historyCollapsed: !!session.historyCollapsed,
+        historyCollapsed: session.historyCollapsed !== false,
         sentenceHighlights: normalizeStoredSentenceHighlights(session.sentenceHighlights),
         waitingForNext: !!session.waitingForNext,
         hintLevel: Number.isFinite(session.hintLevel) ? Math.max(0, Math.floor(session.hintLevel)) : 0,
@@ -4435,6 +4497,37 @@
       var seconds = totalSeconds % 60;
       return String(minutes) + ":" + String(seconds).padStart(2, "0");
     }
+    function normalizeTopicRecordingGapMs(value) {
+      var n = Number(value);
+      if (!Number.isFinite(n)) return TOPIC_RECORDING_GAP_MS;
+      return Math.max(0, Math.min(10000, Math.round(n)));
+    }
+    function getStoredTopicRecordingGapMs() {
+      try {
+        var raw = localStorage.getItem(TOPIC_RECORDING_GAP_KEY);
+        if (raw !== null) return normalizeTopicRecordingGapMs(parseInt(raw, 10));
+      } catch (e) {}
+      return TOPIC_RECORDING_GAP_MS;
+    }
+    function getTopicRecordingGapMs() {
+      if (!elements.allTopicRecordingGapInput) return getStoredTopicRecordingGapMs();
+      return normalizeTopicRecordingGapMs(parseFloat(elements.allTopicRecordingGapInput.value) * 1000);
+    }
+    function setTopicRecordingGapInput(ms) {
+      if (!elements.allTopicRecordingGapInput) return;
+      var normalized = normalizeTopicRecordingGapMs(ms);
+      var seconds = normalized / 1000;
+      elements.allTopicRecordingGapInput.value = seconds % 1 === 0 ? String(seconds) : seconds.toFixed(1);
+    }
+    function saveTopicRecordingGap() {
+      var gapMs = getTopicRecordingGapMs();
+      setTopicRecordingGapInput(gapMs);
+      try { localStorage.setItem(TOPIC_RECORDING_GAP_KEY, String(gapMs)); } catch (e) {}
+      updateTopicRecordingButtons();
+    }
+    function restoreTopicRecordingGap() {
+      setTopicRecordingGapInput(getStoredTopicRecordingGapMs());
+    }
     function getCurrentSentence() {
       return state.currentQueue[state.currentIndex] || null;
     }
@@ -4703,7 +4796,7 @@
     }
     function isTopicRecordingPlaybackActive(topicId) {
       if (!topicId || topicAudioState.playbackTopicId !== topicId) return false;
-      return !!(topicAudioState.playbackAudio || topicAudioState.gapTimerId || topicAudioState.playbackQueue.length);
+      return !!(topicAudioState.playbackAudio || topicAudioState.gapTimerId || topicAudioState.announcingTitle || topicAudioState.playbackQueue.length);
     }
     function clearTopicPlaybackAudio(skipUpdate) {
       var audio = topicAudioState.playbackAudio;
@@ -4721,10 +4814,14 @@
     }
     function stopTopicRecordingPlayback(skipUpdate) {
       topicAudioState.requestToken += 1;
+      topicAudioState.announceRequestId += 1;
       if (topicAudioState.gapTimerId) {
         clearTimeout(topicAudioState.gapTimerId);
         topicAudioState.gapTimerId = null;
       }
+      if (topicAudioState.announcingTitle) stopSpeaking();
+      topicAudioState.announcingTitle = false;
+      topicAudioState.announcedTopicKeys = {};
       clearTopicPlaybackAudio(true);
       topicAudioState.playbackLoading = false;
       topicAudioState.playbackQueue = [];
@@ -4732,10 +4829,11 @@
       topicAudioState.playbackTopicId = "";
       if (!skipUpdate) updateTopicRecordingButtons();
     }
-    function loadTopicRecordingEntries(topic) {
+    function loadTopicRecordingEntries(topic, options) {
+      var gapMs = normalizeTopicRecordingGapMs(options && options.gapMs !== undefined ? options.gapMs : getTopicRecordingGapMs());
       var sentences = createTopicSentenceRecordsForAudio(topic);
       if (!topic || !sentences.length) {
-        return Promise.resolve({ topic: topic, entries: [], recordingCount: 0, totalDurationMs: 0 });
+        return Promise.resolve({ topic: topic, entries: [], sentenceCount: 0, missingCount: 0, recordingCount: 0, totalDurationMs: 0, gapMs: gapMs });
       }
       return Promise.all(sentences.map(function(sentence) {
         var storageKey = getSentenceRecordingStorageKey(sentence);
@@ -4744,6 +4842,7 @@
           return {
             storageKey: storageKey,
             sentence: sentence,
+            topic: topic,
             blob: record.blob,
             mimeType: record.mimeType || (record.blob && record.blob.type) || "",
             durationMs: record.durationMs || 0
@@ -4754,12 +4853,15 @@
         var totalDurationMs = entries.reduce(function(sum, entry) {
           return sum + Math.max(0, entry.durationMs || 0);
         }, 0);
-        if (entries.length > 1) totalDurationMs += TOPIC_RECORDING_GAP_MS * (entries.length - 1);
+        if (entries.length > 1) totalDurationMs += gapMs * (entries.length - 1);
         return {
           topic: topic,
           entries: entries,
+          sentenceCount: sentences.length,
+          missingCount: Math.max(0, sentences.length - entries.length),
           recordingCount: entries.length,
-          totalDurationMs: totalDurationMs
+          totalDurationMs: totalDurationMs,
+          gapMs: gapMs
         };
       });
     }
@@ -4768,15 +4870,29 @@
       var safe = title.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "").replace(/\s+/g, "-");
       return (safe || "topic") + "-recordings.wav";
     }
+    function createAllTopicRecordingFileName() {
+      var stamp = new Date().toISOString().slice(0, 10);
+      return "all-topic-recordings-" + stamp + ".wav";
+    }
+    function hasAnyTopicSourceForAudio() {
+      for (var i = 0; i < state.topics.length; i++) {
+        if (createTopicSentenceRecordsForAudio(state.topics[i]).length) return true;
+      }
+      return false;
+    }
     function getTopicRecordingPlayButtonTitle(topic, disabledReason, isPlaying) {
       if (disabledReason) return disabledReason;
       if (!topic) return "먼저 주제를 선택해 주세요.";
-      return isPlaying ? "현재 주제 이어듣기 멈추기" : "녹음된 문장만 순서대로 이어듣기";
+      return isPlaying ? "현재 주제 이어듣기 멈추기" : "주제명을 읽은 뒤 녹음된 문장을 순서대로 이어듣기";
     }
     function getTopicRecordingExportButtonTitle(topic, disabledReason) {
       if (disabledReason) return disabledReason;
       if (!topic) return "먼저 주제를 선택해 주세요.";
       return "녹음된 문장을 하나의 WAV 파일로 저장";
+    }
+    function getAllTopicRecordingExportButtonTitle(disabledReason) {
+      if (disabledReason) return disabledReason;
+      return "녹음이 있는 전체 주제를 하나의 WAV 파일로 저장";
     }
     function getTopicDocumentExportButtonTitle(topic, disabledReason, format) {
       if (disabledReason) return disabledReason;
@@ -4788,21 +4904,28 @@
     function updateTopicRecordingButtons() {
       var playButton = elements.playTopicRecordingsButton;
       var exportButton = elements.exportTopicRecordingsButton;
+      var exportAllButton = elements.exportAllTopicRecordingsButton;
       var pdfButton = elements.exportTopicPdfButton;
       var wordButton = elements.exportTopicWordButton;
       if (!playButton || !exportButton) return;
       var topic = getSelectedTopic();
       var hasSource = !!createTopicSentenceRecordsForAudio(topic).length;
+      var hasAnySource = hasAnyTopicSourceForAudio();
       var playbackSupportMessage = getTopicRecordingSupportMessage();
       var exportSupportMessage = getTopicRecordingExportSupportMessage();
       var isPlaying = !!(topic && isTopicRecordingPlaybackActive(topic.id));
       var isBusy = recordingState.isRecording || recordingState.loading;
+      var isExportingTopic = topicAudioState.exportLoading && topicAudioState.exportMode === "topic";
+      var isExportingAll = topicAudioState.exportLoading && topicAudioState.exportMode === "all";
       var documentDisabledReason = !hasSource ? "먼저 이 주제의 모범 답안을 입력해 주세요." : "";
       var playbackDisabledReason = !hasSource
         ? "먼저 이 주제의 모범 답안을 입력해 주세요."
         : playbackSupportMessage || (isBusy ? "문장 녹음 중이거나 녹음 정보를 준비하는 중입니다." : "") || (topicAudioState.playbackLoading ? "주제 녹음을 준비하는 중입니다." : "") || (topicAudioState.exportLoading ? "주제 WAV 파일을 준비하는 중입니다." : "");
       var exportDisabledReason = !hasSource
         ? "먼저 이 주제의 모범 답안을 입력해 주세요."
+        : exportSupportMessage || (isBusy ? "문장 녹음 중이거나 녹음 정보를 준비하는 중입니다." : "") || (isPlaying || topicAudioState.playbackLoading ? "이어듣기를 멈춘 뒤 WAV로 내보낼 수 있습니다." : "");
+      var exportAllDisabledReason = !hasAnySource
+        ? "먼저 하나 이상의 주제에 모범 답안을 입력해 주세요."
         : exportSupportMessage || (isBusy ? "문장 녹음 중이거나 녹음 정보를 준비하는 중입니다." : "") || (isPlaying || topicAudioState.playbackLoading ? "이어듣기를 멈춘 뒤 WAV로 내보낼 수 있습니다." : "");
 
       playButton.textContent = topicAudioState.playbackLoading ? "주제 녹음 준비 중..." : isPlaying ? "이어듣기 멈추기" : "주제 녹음 이어듣기";
@@ -4811,10 +4934,17 @@
       playButton.setAttribute("aria-label", playButton.title);
       playButton.setAttribute("aria-pressed", isPlaying ? "true" : "false");
 
-      exportButton.textContent = topicAudioState.exportLoading ? "WAV 준비 중..." : "주제 녹음 WAV 내보내기";
+      exportButton.textContent = isExportingTopic ? "WAV 준비 중..." : "주제 녹음 WAV 내보내기";
       exportButton.disabled = !!exportDisabledReason || topicAudioState.exportLoading;
       exportButton.title = getTopicRecordingExportButtonTitle(topic, exportDisabledReason);
       exportButton.setAttribute("aria-label", exportButton.title);
+
+      if (exportAllButton) {
+        exportAllButton.textContent = isExportingAll ? "전체 WAV 준비 중..." : "전체 주제 녹음 WAV 내보내기";
+        exportAllButton.disabled = !!exportAllDisabledReason || topicAudioState.exportLoading;
+        exportAllButton.title = getAllTopicRecordingExportButtonTitle(exportAllDisabledReason);
+        exportAllButton.setAttribute("aria-label", exportAllButton.title);
+      }
 
       if (pdfButton) {
         pdfButton.disabled = !!documentDisabledReason;
@@ -4826,6 +4956,76 @@
         wordButton.title = getTopicDocumentExportButtonTitle(topic, documentDisabledReason, "word");
         wordButton.setAttribute("aria-label", wordButton.title);
       }
+    }
+    function getTopicPlaybackEntryKey(entry) {
+      var topic = entry && entry.topic;
+      var topicId = topic && topic.id ? topic.id : entry && entry.sentence && entry.sentence.topicId ? entry.sentence.topicId : topicAudioState.playbackTopicId;
+      return topicId || "";
+    }
+    function getTopicPlaybackEntryTitle(entry) {
+      var topic = entry && entry.topic;
+      if (topic && topic.title) return normalizeTopicTitleValue(topic.title);
+      var selected = getSelectedTopic();
+      return normalizeTopicTitleValue(selected && selected.title);
+    }
+    function shouldAnnounceTopicPlaybackTitle(entry) {
+      if (!speechState.supported || !entry) return false;
+      var key = getTopicPlaybackEntryKey(entry);
+      var title = getTopicPlaybackEntryTitle(entry);
+      return !!(key && title && !topicAudioState.announcedTopicKeys[key]);
+    }
+    function finishTopicPlaybackTitleAnnouncement(requestId, onDone) {
+      if (topicAudioState.announceRequestId !== requestId) return;
+      topicAudioState.announcingTitle = false;
+      speechState.activeUtterance = null;
+      speechState.speaking = false;
+      updateReadButtonState();
+      updateTopicRecordingButtons();
+      if (typeof onDone === "function") {
+        topicAudioState.gapTimerId = setTimeout(function() {
+          topicAudioState.gapTimerId = null;
+          onDone();
+        }, 180);
+      }
+    }
+    function announceTopicPlaybackTitle(entry, onDone) {
+      if (!shouldAnnounceTopicPlaybackTitle(entry)) {
+        if (typeof onDone === "function") onDone();
+        return;
+      }
+      var key = getTopicPlaybackEntryKey(entry);
+      var title = getTopicPlaybackEntryTitle(entry);
+      topicAudioState.announcedTopicKeys[key] = true;
+      topicAudioState.announcingTitle = true;
+      topicAudioState.announceRequestId += 1;
+      var requestId = topicAudioState.announceRequestId;
+      window.speechSynthesis.cancel();
+      speechState.pendingRequestId = 0;
+      speechState.activeUtterance = null;
+      speechState.speaking = true;
+      updateReadButtonState();
+      updateTopicRecordingButtons();
+      var utterance = new SpeechSynthesisUtterance(title);
+      var voice = pickSpeechVoice();
+      utterance.lang = voice && voice.lang ? voice.lang : "ko-KR";
+      if (voice) utterance.voice = voice;
+      utterance.rate = Math.max(0.75, Math.min(1.1, speechState.rate));
+      utterance.pitch = 1;
+      utterance.onstart = function() {
+        if (topicAudioState.announceRequestId !== requestId) return;
+        speechState.activeUtterance = utterance;
+        speechState.speaking = true;
+        updateReadButtonState();
+        updateTopicRecordingButtons();
+      };
+      utterance.onend = function() {
+        finishTopicPlaybackTitleAnnouncement(requestId, onDone);
+      };
+      utterance.onerror = function() {
+        finishTopicPlaybackTitleAnnouncement(requestId, onDone);
+      };
+      speechState.activeUtterance = utterance;
+      window.speechSynthesis.speak(utterance);
     }
     function playNextTopicRecordingQueueItem() {
       if (topicAudioState.gapTimerId) {
@@ -4839,6 +5039,10 @@
         return;
       }
       var entry = topicAudioState.playbackQueue[topicAudioState.playbackIndex];
+      if (shouldAnnounceTopicPlaybackTitle(entry)) {
+        announceTopicPlaybackTitle(entry, playNextTopicRecordingQueueItem);
+        return;
+      }
       var url = URL.createObjectURL(entry.blob);
       var audio = new Audio(url);
       topicAudioState.playbackAudio = audio;
@@ -4854,7 +5058,7 @@
         topicAudioState.gapTimerId = setTimeout(function() {
           topicAudioState.gapTimerId = null;
           playNextTopicRecordingQueueItem();
-        }, TOPIC_RECORDING_GAP_MS);
+        }, topicAudioState.playbackGapMs);
         updateTopicRecordingButtons();
       };
       audio.onerror = function() {
@@ -4893,10 +5097,11 @@
       stopSentencePlayback();
       stopTopicRecordingPlayback(true);
       topicAudioState.playbackLoading = true;
+      topicAudioState.playbackGapMs = getTopicRecordingGapMs();
       topicAudioState.requestToken += 1;
       var token = topicAudioState.requestToken;
       updateTopicRecordingButtons();
-      loadTopicRecordingEntries(topic).then(function(payload) {
+      loadTopicRecordingEntries(topic, { gapMs: topicAudioState.playbackGapMs }).then(function(payload) {
         if (token !== topicAudioState.requestToken) return;
         topicAudioState.playbackLoading = false;
         if (!payload.entries.length) {
@@ -4983,7 +5188,8 @@
       }
       return new Blob([buffer], { type: "audio/wav" });
     }
-    function createTopicRecordingWavBlob(entries) {
+    function createTopicRecordingWavBlob(entries, options) {
+      var gapMs = normalizeTopicRecordingGapMs(options && options.gapMs !== undefined ? options.gapMs : getTopicRecordingGapMs());
       var AudioContextCtor = getTopicAudioContextConstructor();
       if (!AudioContextCtor) return Promise.reject(new Error("audio-context-unavailable"));
       var audioContext;
@@ -5001,14 +5207,22 @@
       })).then(function(results) {
         var decoded = results.filter(Boolean);
         if (!decoded.length) throw new Error("topic-recordings-decode-failed");
-        var gapSamples = Math.round(audioContext.sampleRate * (TOPIC_RECORDING_GAP_MS / 1000));
         var channelCount = decoded.reduce(function(maxValue, item) {
           return Math.max(maxValue, item.buffer.numberOfChannels || 1);
         }, 1);
+        function getGapSamplesAfter(index) {
+          if (index >= decoded.length - 1) return 0;
+          var entryGapMs = decoded[index].entry && Number.isFinite(decoded[index].entry.gapAfterMs)
+            ? decoded[index].entry.gapAfterMs
+            : gapMs;
+          return Math.round(audioContext.sampleRate * (normalizeTopicRecordingGapMs(entryGapMs) / 1000));
+        }
         var totalSamples = decoded.reduce(function(sum, item) {
           return sum + item.buffer.length;
         }, 0);
-        if (decoded.length > 1) totalSamples += gapSamples * (decoded.length - 1);
+        for (var gapIndex = 0; gapIndex < decoded.length - 1; gapIndex++) {
+          totalSamples += getGapSamplesAfter(gapIndex);
+        }
         var channels = [];
         for (var channel = 0; channel < channelCount; channel++) channels.push(new Float32Array(totalSamples));
         var offset = 0;
@@ -5019,7 +5233,7 @@
             channels[channelIndex].set(sourceChannel, offset);
           }
           offset += buffer.length;
-          if (i < decoded.length - 1) offset += gapSamples;
+          offset += getGapSamplesAfter(i);
         }
         return {
           blob: encodeWavFromChannelData(channels, audioContext.sampleRate),
@@ -5029,6 +5243,150 @@
         if (audioContext && typeof audioContext.close === "function") {
           try { audioContext.close(); } catch (e) {}
         }
+      });
+    }
+    function cloneTopicRecordingEntry(entry, topic, gapAfterMs) {
+      return {
+        storageKey: entry.storageKey,
+        sentence: entry.sentence,
+        topic: topic,
+        blob: entry.blob,
+        mimeType: entry.mimeType || "",
+        durationMs: entry.durationMs || 0,
+        gapAfterMs: gapAfterMs
+      };
+    }
+    function calculateRecordingEntriesDuration(entries) {
+      var total = 0;
+      for (var i = 0; i < entries.length; i++) {
+        total += Math.max(0, entries[i].durationMs || 0);
+        if (i < entries.length - 1) total += normalizeTopicRecordingGapMs(entries[i].gapAfterMs);
+      }
+      return total;
+    }
+    function loadAllTopicRecordingEntries(options) {
+      var gapMs = normalizeTopicRecordingGapMs(options && options.gapMs !== undefined ? options.gapMs : getTopicRecordingGapMs());
+      var topics = state.topics.slice();
+      return Promise.all(topics.map(function(topic) {
+        return loadTopicRecordingEntries(topic, { gapMs: gapMs });
+      })).then(function(payloads) {
+        var includedPayloads = payloads.filter(function(payload) {
+          return payload && payload.entries && payload.entries.length;
+        });
+        var entries = [];
+        var totalSentenceCount = 0;
+        var missingSentenceCount = 0;
+        for (var i = 0; i < payloads.length; i++) {
+          totalSentenceCount += payloads[i].sentenceCount || 0;
+          missingSentenceCount += payloads[i].missingCount || 0;
+        }
+        for (var topicIndex = 0; topicIndex < includedPayloads.length; topicIndex++) {
+          var payload = includedPayloads[topicIndex];
+          for (var entryIndex = 0; entryIndex < payload.entries.length; entryIndex++) {
+            entries.push(cloneTopicRecordingEntry(payload.entries[entryIndex], payload.topic, gapMs));
+          }
+          if (entries.length && topicIndex < includedPayloads.length - 1) {
+            entries[entries.length - 1].gapAfterMs = Math.max(gapMs, 1200);
+          }
+        }
+        return {
+          topics: includedPayloads.map(function(payload) { return payload.topic; }),
+          skippedTopicCount: Math.max(0, topics.length - includedPayloads.length),
+          totalTopicCount: topics.length,
+          totalSentenceCount: totalSentenceCount,
+          missingSentenceCount: missingSentenceCount,
+          entries: entries,
+          recordingCount: entries.length,
+          totalDurationMs: calculateRecordingEntriesDuration(entries),
+          gapMs: gapMs
+        };
+      });
+    }
+    function openAllTopicExportModal() {
+      if (recordingState.isRecording) {
+        setFeedback("문장 녹음 중에는 내보낼 수 없습니다.", "먼저 현재 문장 녹음을 저장해 주세요.", "", "warning");
+        return;
+      }
+      if (recordingState.loading || topicAudioState.playbackLoading || topicAudioState.exportLoading) return;
+      var supportMessage = getTopicRecordingExportSupportMessage();
+      if (supportMessage) {
+        setFeedback("전체 주제 녹음을 내보낼 수 없습니다.", supportMessage, "bad", "warning");
+        return;
+      }
+      if (!hasAnyTopicSourceForAudio()) {
+        setFeedback("저장된 모범 답안이 없습니다.", "먼저 하나 이상의 주제에 모범 답안을 입력해 주세요.", "", "warning");
+        return;
+      }
+      setTopicRecordingGapInput(getStoredTopicRecordingGapMs());
+      elements.allTopicExportModal.hidden = false;
+      requestAnimationFrame(function() {
+        elements.allTopicExportModal.classList.add("visible");
+        if (elements.allTopicRecordingGapInput) elements.allTopicRecordingGapInput.focus();
+      });
+    }
+    function hideAllTopicExportModal() {
+      elements.allTopicExportModal.classList.remove("visible");
+      setTimeout(function() { elements.allTopicExportModal.hidden = true; }, 220);
+    }
+    function confirmAllTopicExportModal() {
+      saveTopicRecordingGap();
+      hideAllTopicExportModal();
+      exportAllTopicRecordings();
+    }
+    function exportAllTopicRecordings() {
+      if (recordingState.isRecording) {
+        setFeedback("문장 녹음 중에는 내보낼 수 없습니다.", "먼저 현재 문장 녹음을 저장해 주세요.", "", "warning");
+        return;
+      }
+      if (recordingState.loading || topicAudioState.playbackLoading || topicAudioState.exportLoading) return;
+      var supportMessage = getTopicRecordingExportSupportMessage();
+      if (supportMessage) {
+        setFeedback("전체 주제 녹음을 내보낼 수 없습니다.", supportMessage, "bad", "warning");
+        return;
+      }
+      if (!hasAnyTopicSourceForAudio()) {
+        setFeedback("저장된 모범 답안이 없습니다.", "먼저 하나 이상의 주제에 모범 답안을 입력해 주세요.", "", "warning");
+        return;
+      }
+      stopTopicRecordingPlayback();
+      stopSentencePlayback();
+      stopSpeaking();
+      topicAudioState.exportLoading = true;
+      topicAudioState.exportMode = "all";
+      var gapMs = getTopicRecordingGapMs();
+      updateTopicRecordingButtons();
+      setFeedback("전체 주제 녹음을 WAV로 준비하는 중입니다.", "녹음이 있는 주제를 순서대로 모아 하나의 파일로 만듭니다.", "", "note");
+      loadAllTopicRecordingEntries({ gapMs: gapMs }).then(function(payload) {
+        if (!payload.entries.length) {
+          setFeedback("저장된 녹음이 없습니다.", "녹음된 문장이 있는 주제만 WAV 파일에 포함됩니다.", "", "note");
+          return null;
+        }
+        return createTopicRecordingWavBlob(payload.entries, { gapMs: gapMs }).then(function(result) {
+          if (!result || !result.blob) throw new Error("topic-recordings-export-failed");
+          downloadBlobFile(createAllTopicRecordingFileName(), result.blob);
+          var message = payload.topics.length + "개 주제의 " + payload.recordingCount + "개 문장을 하나의 WAV 파일로 저장했습니다.";
+          if (payload.skippedTopicCount > 0) message += " 녹음이 없는 주제 " + payload.skippedTopicCount + "개는 제외했습니다.";
+          if (payload.missingSentenceCount > 0) message += " 녹음이 없는 문장 " + payload.missingSentenceCount + "개도 제외했습니다.";
+          if (result.decodedCount < payload.recordingCount) {
+            message += " 일부 녹음은 브라우저가 합치지 못해 제외했습니다.";
+          }
+          message += " 주제명 TTS는 브라우저가 WAV로 추출하는 기능을 제공하지 않아 포함되지 않았습니다.";
+          setFeedback("전체 주제 녹음을 내보냈습니다.", message, "", "success");
+        });
+      }).catch(function(error) {
+        if (error && error.message === "topic-recordings-decode-failed") {
+          setFeedback("전체 주제 녹음을 내보내지 못했습니다.", "브라우저가 저장된 음성을 WAV로 변환하지 못했습니다.", "bad", "warning");
+          return;
+        }
+        if (error && error.message === "topic-recordings-export-failed") {
+          setFeedback("전체 주제 녹음을 내보내지 못했습니다.", "하나의 WAV 파일을 만드는 중 문제가 생겼습니다.", "bad", "warning");
+          return;
+        }
+        setFeedback("전체 주제 녹음을 내보내지 못했습니다.", "브라우저 로컬 저장소에서 음성을 읽지 못했습니다.", "bad", "warning");
+      }).finally(function() {
+        topicAudioState.exportLoading = false;
+        topicAudioState.exportMode = "";
+        updateTopicRecordingButtons();
       });
     }
     function exportTopicRecordings() {
@@ -5052,14 +5410,16 @@
       stopSentencePlayback();
       stopSpeaking();
       topicAudioState.exportLoading = true;
+      topicAudioState.exportMode = "topic";
+      var gapMs = getTopicRecordingGapMs();
       updateTopicRecordingButtons();
       setFeedback("주제 녹음을 WAV로 준비하는 중입니다.", "저장된 문장을 순서대로 이어 붙여 하나의 파일로 만듭니다.", "", "note");
-      loadTopicRecordingEntries(topic).then(function(payload) {
+      loadTopicRecordingEntries(topic, { gapMs: gapMs }).then(function(payload) {
         if (!payload.entries.length) {
           setFeedback("이 주제에 저장된 녹음이 없습니다.", "녹음된 문장만 WAV 파일로 내보낼 수 있습니다.", "", "note");
           return null;
         }
-        return createTopicRecordingWavBlob(payload.entries).then(function(result) {
+        return createTopicRecordingWavBlob(payload.entries, { gapMs: gapMs }).then(function(result) {
           if (!result || !result.blob) throw new Error("topic-recordings-export-failed");
           downloadBlobFile(createTopicRecordingFileName(topic), result.blob);
           var message = payload.recordingCount + "개 문장을 하나의 WAV 파일로 저장했습니다.";
@@ -5080,6 +5440,7 @@
         setFeedback("주제 녹음을 내보내지 못했습니다.", "브라우저 로컬 저장소에서 음성을 읽지 못했습니다.", "bad", "warning");
       }).finally(function() {
         topicAudioState.exportLoading = false;
+        topicAudioState.exportMode = "";
         updateTopicRecordingButtons();
       });
     }
@@ -5513,11 +5874,25 @@
         clearTimeout(speechState.pendingTimer);
         speechState.pendingTimer = null;
       }
+      if (typeof topicAudioState !== "undefined" && topicAudioState.announcingTitle) {
+        topicAudioState.announceRequestId += 1;
+        topicAudioState.announcingTitle = false;
+        topicAudioState.announcedTopicKeys = {};
+        topicAudioState.playbackQueue = [];
+        topicAudioState.playbackIndex = 0;
+        topicAudioState.playbackTopicId = "";
+        if (topicAudioState.gapTimerId) {
+          clearTimeout(topicAudioState.gapTimerId);
+          topicAudioState.gapTimerId = null;
+        }
+        clearTopicPlaybackAudio(true);
+      }
       speechState.pendingRequestId = 0;
       window.speechSynthesis.cancel();
       speechState.activeUtterance = null;
       speechState.speaking = false;
       updateReadButtonState();
+      updateTopicRecordingButtons();
     }
     function updateReadButtonState() {
       var btn = elements.readSentenceButton;
@@ -6745,7 +7120,7 @@
       return e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"||e.key===" "||e.code==="Space"||e.key==="Enter"||e.code==="KeyR"||e.code==="KeyV"||e.code==="KeyA"||e.code==="KeyP"||e.code==="KeyO";
     }
     function isPracticeOverlayOpen(){
-      return !elements.sourceModal.hidden||!elements.celebrationOverlay.hidden;
+      return !elements.sourceModal.hidden||!elements.allTopicExportModal.hidden||!elements.celebrationOverlay.hidden;
     }
     function shouldOwnPracticeShortcut(e){
       if(e.defaultPrevented)return false;
@@ -6837,6 +7212,17 @@
     elements.saveTopicButton.addEventListener("click",saveCurrentTopicManually);
     elements.playTopicRecordingsButton.addEventListener("click",toggleTopicRecordingsPlayback);
     elements.exportTopicRecordingsButton.addEventListener("click",exportTopicRecordings);
+    elements.exportAllTopicRecordingsButton.addEventListener("click",openAllTopicExportModal);
+    elements.allTopicRecordingGapInput.addEventListener("change",saveTopicRecordingGap);
+    elements.allTopicRecordingGapInput.addEventListener("blur",saveTopicRecordingGap);
+    elements.allTopicExportCancel.addEventListener("click",hideAllTopicExportModal);
+    elements.allTopicExportClose.addEventListener("click",hideAllTopicExportModal);
+    elements.allTopicExportConfirm.addEventListener("click",confirmAllTopicExportModal);
+    elements.allTopicExportModal.addEventListener("click",function(e){if(e.target===elements.allTopicExportModal)hideAllTopicExportModal();});
+    elements.allTopicExportModal.addEventListener("keydown",function(e){
+      if(e.key==="Escape"){e.preventDefault();hideAllTopicExportModal();return;}
+      if(e.key==="Enter"&&!e.isComposing){e.preventDefault();confirmAllTopicExportModal();}
+    });
     elements.exportTopicPdfButton.addEventListener("click",exportTopicDocumentAsPdf);
     elements.exportTopicWordButton.addEventListener("click",exportTopicDocumentAsWord);
     elements.exportBackupButton.addEventListener("click",exportStudyBackup);
@@ -7009,6 +7395,7 @@
     restoreSourceDraft();
     restoreManualSourceSentences();
     restoreSpeechRate();
+    restoreTopicRecordingGap();
     loadSpeechVoices();
     renderHeatmapPanel();
     setPracticeAuxVisibility(false);

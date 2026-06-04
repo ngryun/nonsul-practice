@@ -7015,7 +7015,6 @@
       moveToNextSentence();
     }
     function moveToNextSentence(){
-      if(state.gradedAt && Date.now()-state.gradedAt<280)return;
       var continueMemorizeMode = shouldContinueMemorizeModeOnAdvance();
       if(state.active && state.currentQueue.length && state.currentIndex>=state.currentQueue.length-1 && state.retryQueue.length===0){
         if(!state.waitingForNext&&shouldBlockEmptyLastSentenceAdvance())return;

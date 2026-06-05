@@ -904,6 +904,9 @@
       filter: blur(8px); user-select: none; pointer-events: none;
       transition: filter var(--transition-normal);
     }
+    .sentence-card.memorize.answer-peek .target-sentence {
+      filter: none; user-select: text; pointer-events: auto;
+    }
     .sentence-card .sentence-action-row {
       margin-top: 12px;
       display: flex;
@@ -3375,16 +3378,23 @@
       state.clozeAnswersVisible = inputs.length > 0;
       updateClozeAnswerToggleButton();
     }
+    function isFullMemorizeActive() {
+      return !!(state.active && elements.sentenceCard.classList.contains("memorize"));
+    }
+    function isFullAnswerVisible() {
+      return elements.sentenceCard.classList.contains("answer-peek");
+    }
     function updateClozeAnswerToggleButton() {
       var btn = elements.clozeAnswerToggleButton;
       if (!btn) return;
-      var available = !!(
+      var clozeAvailable = !!(
         state.active &&
         state.currentStage === "cloze" &&
         state.clozeData &&
         elements.sentenceCard.classList.contains("cloze-active")
       );
-      if (!available) {
+      var fullAvailable = !clozeAvailable && isFullMemorizeActive();
+      if (!clozeAvailable && !fullAvailable) {
         btn.hidden = true;
         btn.disabled = true;
         btn.innerHTML = '정답 보기 <span class="shortcut-hint">Ctrl/Cmd+.</span>';
@@ -3393,14 +3403,22 @@
         state.clozeAnswersVisible = false;
         return;
       }
-      var visible = getClozeRevealAnswers().length > 0;
-      state.clozeAnswersVisible = visible;
+      var visible;
+      if (clozeAvailable) {
+        visible = getClozeRevealAnswers().length > 0;
+        state.clozeAnswersVisible = visible;
+        btn.title = visible
+          ? "한번에 표시한 빈칸 정답을 다시 가립니다."
+          : "모든 빈칸 정답을 한번에 표시합니다.";
+      } else {
+        visible = isFullAnswerVisible();
+        btn.title = visible
+          ? "정답 문장을 다시 가립니다."
+          : "가려진 정답 문장을 잠깐 보여줍니다.";
+      }
       btn.hidden = false;
       btn.disabled = false;
       btn.innerHTML = (visible ? "정답 가리기" : "정답 보기") + ' <span class="shortcut-hint">Ctrl/Cmd+.</span>';
-      btn.title = visible
-        ? "한번에 표시한 빈칸 정답을 다시 가립니다."
-        : "모든 빈칸 정답을 한번에 표시합니다.";
       btn.setAttribute("aria-label", btn.title);
       btn.setAttribute("aria-pressed", visible ? "true" : "false");
     }
@@ -3409,6 +3427,21 @@
       if (!elements.sentenceCard.classList.contains("cloze-active")) return;
       if (state.clozeAnswersVisible || getClozeRevealAnswers().length) hideClozeRevealAnswers();
       else showClozeRevealAnswers();
+    }
+    function toggleFullAnswer() {
+      if (!isFullMemorizeActive()) return;
+      if (isFullAnswerVisible()) elements.sentenceCard.classList.remove("answer-peek");
+      else elements.sentenceCard.classList.add("answer-peek");
+      updateClozeAnswerToggleButton();
+    }
+    function canToggleAnswerReveal() {
+      if (!state.active) return false;
+      if (state.currentStage === "cloze") return canToggleClozeAnswers();
+      return isFullMemorizeActive();
+    }
+    function toggleAnswerReveal() {
+      if (state.currentStage === "cloze") { toggleClozeAnswers(); return; }
+      toggleFullAnswer();
     }
     function clearClozeMarks() {
       var inputs = getClozeInputs();
@@ -3496,7 +3529,7 @@
       state.continueMemorizeOnAdvance = false;
       elements.nextButton.disabled = true;
       elements.retryButton.disabled = true;
-      elements.sentenceCard.classList.remove("memorize", "cloze-active", "cloze-locked");
+      elements.sentenceCard.classList.remove("memorize", "cloze-active", "cloze-locked", "answer-peek");
       document.body.classList.remove("cloze-mode");
       elements.sentenceActionRow.hidden = false;
       elements.memorizeMsg.textContent = message || "같은 문장을 전체로 써 볼 차례입니다. 읽은 뒤 가리고 쓰세요.";
@@ -6802,7 +6835,7 @@
       stopSpeaking();
       if (state.currentStage === "cloze" && state.clozeData) {
         state.clozePassedForCurrent = false;
-        state.continueMemorizeOnAdvance = false;
+        state.continueMemorizeOnAdvance = true;
         renderClozeDisplay(state.clozeData);
         elements.sentenceCard.classList.remove("memorize");
         elements.sentenceCard.classList.add("cloze-active");
@@ -6822,7 +6855,7 @@
       state.continueMemorizeOnAdvance = true;
       document.body.classList.remove("cloze-mode");
       elements.sentenceCard.classList.add("memorize");
-      elements.sentenceCard.classList.remove("cloze-active");
+      elements.sentenceCard.classList.remove("cloze-active", "answer-peek");
       updateClozeAnswerToggleButton();
       elements.sentenceActionRow.hidden=false;
       elements.memorizeMsg.textContent="문장이 가려졌습니다. 기억해서 써보세요!";
@@ -6832,7 +6865,7 @@
       scheduleSelectedTopicPracticeSessionSave();
       elements.userInput.focus();
     }
-    function revealSentence(){finishSentenceRecording("auto");stopSentencePlayback();stopSpeaking();hideClozeRevealAnswers(false);elements.sentenceCard.classList.remove("memorize","cloze-active","cloze-locked");document.body.classList.remove("cloze-mode");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";updateClozeAnswerToggleButton();updateReadButtonState();updateSentenceRecordingButtons();}
+    function revealSentence(){finishSentenceRecording("auto");stopSentencePlayback();stopSpeaking();hideClozeRevealAnswers(false);elements.sentenceCard.classList.remove("memorize","cloze-active","cloze-locked","answer-peek");document.body.classList.remove("cloze-mode");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";updateClozeAnswerToggleButton();updateReadButtonState();updateSentenceRecordingButtons();}
     function isCurrentSentenceAnswering(){
       return !!(state.active && !state.waitingForNext && (
         elements.sentenceCard.classList.contains("memorize") ||
@@ -7029,7 +7062,6 @@
       state.historyAutoScrollPending = true;
       hideDifficultyRow();hideComparison();state.currentIndex+=1;renderCurrentSentence();
       if(continueMemorizeMode && state.active && state.currentQueue[state.currentIndex]){
-        if(state.currentStage !== "full") resetCurrentSentenceForFullStage("");
         hideAndWrite();
       }
     }
@@ -7058,7 +7090,7 @@
       }
       var cur=state.currentQueue[state.currentIndex];
       renderSentenceWithKeywords(cur.text);
-      elements.sentenceCard.classList.remove("animate-in","memorize","cloze-active","cloze-locked");document.body.classList.remove("cloze-mode");
+      elements.sentenceCard.classList.remove("animate-in","memorize","cloze-active","cloze-locked","answer-peek");document.body.classList.remove("cloze-mode");
       hideClozeRevealAnswers(false);
       updateClozeAnswerToggleButton();
       void elements.sentenceCard.offsetWidth;elements.sentenceCard.classList.add("animate-in");
@@ -7357,8 +7389,8 @@
       if(isHintShortcut(e)&&canShowHint()){
         consumeShortcutEvent(e);showHint();return;
       }
-      if(isClozeAnswerShortcut(e)&&canToggleClozeAnswers()){
-        consumeShortcutEvent(e);toggleClozeAnswers();return;
+      if(isClozeAnswerShortcut(e)&&canToggleAnswerReveal()){
+        consumeShortcutEvent(e);toggleAnswerReveal();return;
       }
       if(isSentenceNavShortcut(e)&&canUseSentenceNavShortcut(e)){
         consumeShortcutEvent(e);

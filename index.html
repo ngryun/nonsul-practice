@@ -1200,6 +1200,12 @@
     }
     .sentence-card.cloze-active .target-sentence { display: none; }
     .sentence-card.cloze-active #clozeDisplay { display: block; }
+    .cloze-blank {
+      display: inline-block;
+      position: relative;
+      margin: 0 2px;
+      vertical-align: baseline;
+    }
     .cloze-input {
       display: inline-block; min-width: 60px;
       padding: 2px 8px; margin: 0 2px;
@@ -1210,6 +1216,41 @@
       color: var(--text); font-weight: 600;
       text-align: center;
       transition: all var(--transition-fast);
+    }
+    .cloze-blank .cloze-input { margin: 0; }
+    .cloze-blank.has-ghost-answer::after {
+      content: attr(data-ghost-answer);
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      padding: 2px 8px;
+      color: #92400e;
+      font: inherit;
+      font-weight: 700;
+      line-height: 1.4;
+      opacity: 0.46;
+      overflow: hidden;
+      pointer-events: none;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cloze-blank.has-ghost-answer.is-review-answer::after {
+      color: var(--good);
+      opacity: 0.52;
+    }
+    .cloze-input:disabled { opacity: 1; }
+    .cloze-input.has-ghost-answer {
+      color: transparent;
+      caret-color: transparent;
+      -webkit-text-fill-color: transparent;
+    }
+    .cloze-input.has-ghost-answer::placeholder {
+      color: transparent;
+      opacity: 0;
     }
     .cloze-input:focus { outline: none; background: rgba(245,158,11,0.18); box-shadow: 0 2px 0 #f59e0b; }
     .cloze-input::placeholder { color: #f59e0b; opacity: 0.55; letter-spacing: 1px; font-weight: 500; }
@@ -3336,7 +3377,10 @@
           input.placeholder = new Array(len + 1).join("＿");
           input.style.width = Math.max(72, len * 28 + 20) + "px";
           if (affixes.leading) elements.clozeDisplay.appendChild(document.createTextNode(affixes.leading));
-          elements.clozeDisplay.appendChild(input);
+          var blank = document.createElement("span");
+          blank.className = "cloze-blank";
+          blank.appendChild(input);
+          elements.clozeDisplay.appendChild(blank);
           if (affixes.trailing) elements.clozeDisplay.appendChild(document.createTextNode(affixes.trailing));
           blankPos++;
         } else {
@@ -3349,19 +3393,60 @@
     function getClozeInputs() {
       return elements.clozeDisplay.querySelectorAll(".cloze-input");
     }
+    function getClozeAnswerDisplay(input) {
+      return input ? (input.getAttribute("data-display") || input.getAttribute("data-answer") || "") : "";
+    }
+    function getClozeBlankWrapper(input) {
+      var parent = input && input.parentNode;
+      return parent && parent.nodeType === 1 && parent.classList && parent.classList.contains("cloze-blank")
+        ? parent
+        : null;
+    }
+    function syncClozeGhostAnswer(input) {
+      var blank = getClozeBlankWrapper(input);
+      if (!blank) return;
+      var showReview = input.classList.contains("cloze-review-answer");
+      var showReveal = input.classList.contains("cloze-reveal-answer");
+      var answer = getClozeAnswerDisplay(input);
+      if ((showReview || showReveal) && answer) {
+        blank.setAttribute("data-ghost-answer", answer);
+        blank.classList.add("has-ghost-answer");
+        blank.classList.toggle("is-review-answer", showReview);
+        blank.classList.toggle("is-reveal-answer", showReveal && !showReview);
+        input.classList.add("has-ghost-answer");
+      } else {
+        blank.removeAttribute("data-ghost-answer");
+        blank.classList.remove("has-ghost-answer", "is-review-answer", "is-reveal-answer");
+        input.classList.remove("has-ghost-answer");
+      }
+    }
+    function showClozeReviewAnswer(input) {
+      if (!input) return;
+      input.classList.add("cloze-review-answer");
+      syncClozeGhostAnswer(input);
+    }
+    function showClozeRevealAnswer(input) {
+      if (!input) return;
+      input.classList.add("cloze-reveal-answer");
+      syncClozeGhostAnswer(input);
+    }
+    function clearClozeRevealAnswer(input) {
+      if (!input) return;
+      input.classList.remove("cloze-reveal-answer");
+      syncClozeGhostAnswer(input);
+    }
+    function clearClozeAnswerState(input) {
+      if (!input) return;
+      input.classList.remove("cloze-review-answer", "cloze-reveal-answer", "has-ghost-answer");
+      syncClozeGhostAnswer(input);
+    }
     function getClozeRevealAnswers() {
       if (!elements.clozeDisplay) return [];
-      return Array.from(elements.clozeDisplay.querySelectorAll(".cloze-answer-reveal"));
-    }
-    function getDirectClozeAnswerAfter(input) {
-      var next = input && input.nextSibling;
-      return next && next.nodeType === 1 && next.classList && next.classList.contains("cloze-answer")
-        ? next
-        : null;
+      return Array.from(elements.clozeDisplay.querySelectorAll(".cloze-input.cloze-reveal-answer"));
     }
     function hideClozeRevealAnswers(shouldUpdate) {
       var answers = getClozeRevealAnswers();
-      for (var i = 0; i < answers.length; i++) answers[i].parentNode.removeChild(answers[i]);
+      for (var i = 0; i < answers.length; i++) clearClozeRevealAnswer(answers[i]);
       state.clozeAnswersVisible = false;
       if (shouldUpdate !== false) updateClozeAnswerToggleButton();
     }
@@ -3369,11 +3454,7 @@
       hideClozeRevealAnswers(false);
       var inputs = getClozeInputs();
       for (var i = 0; i < inputs.length; i++) {
-        if (getDirectClozeAnswerAfter(inputs[i])) continue;
-        var answer = document.createElement("span");
-        answer.className = "cloze-answer cloze-answer-reveal";
-        answer.textContent = inputs[i].getAttribute("data-display") || inputs[i].getAttribute("data-answer") || "";
-        inputs[i].parentNode.insertBefore(answer, inputs[i].nextSibling);
+        showClozeRevealAnswer(inputs[i]);
       }
       state.clozeAnswersVisible = inputs.length > 0;
       updateClozeAnswerToggleButton();
@@ -3447,6 +3528,7 @@
       var inputs = getClozeInputs();
       for (var i = 0; i < inputs.length; i++) {
         inputs[i].classList.remove("correct", "wrong");
+        clearClozeAnswerState(inputs[i]);
         inputs[i].disabled = false;
       }
       var answers = elements.clozeDisplay.querySelectorAll(".cloze-answer");
@@ -4459,10 +4541,7 @@
             detail.input.disabled = true;
           } else {
             detail.input.classList.add("wrong");
-            var answer = document.createElement("span");
-            answer.className = "cloze-answer";
-            answer.textContent = detail.input.getAttribute("data-display") || detail.expected;
-            detail.input.parentNode.insertBefore(answer, detail.input.nextSibling);
+            showClozeReviewAnswer(detail.input);
           }
         }
         elements.sentenceCard.classList.remove("memorize");
@@ -4489,10 +4568,7 @@
             passedDetail.input.disabled = true;
           } else {
             passedDetail.input.classList.add("wrong");
-            var passedAnswer = document.createElement("span");
-            passedAnswer.className = "cloze-answer";
-            passedAnswer.textContent = passedDetail.input.getAttribute("data-display") || passedDetail.expected;
-            passedDetail.input.parentNode.insertBefore(passedAnswer, passedDetail.input.nextSibling);
+            showClozeReviewAnswer(passedDetail.input);
           }
         }
         elements.sentenceCard.classList.remove("memorize");
@@ -7284,10 +7360,7 @@
           d.input.disabled = true;
         } else {
           d.input.classList.add("wrong");
-          var ans = document.createElement("span");
-          ans.className = "cloze-answer";
-          ans.textContent = d.input.getAttribute("data-display") || d.expected;
-          d.input.parentNode.insertBefore(ans, d.input.nextSibling);
+          showClozeReviewAnswer(d.input);
         }
       }
       updateClozeAnswerToggleButton();
@@ -7315,7 +7388,7 @@
       } else {
         setFeedback(
           "빈칸 " + result.correct + "/" + result.total + " 정답",
-          "빨간 빈칸 옆에 모범 답안이 표시됩니다. 다시 도전하거나 다음/이전 문장으로 이동할 수 있습니다.",
+          "빨간 빈칸 안에 모범 답안이 희미하게 표시됩니다. 다시 도전하거나 다음/이전 문장으로 이동할 수 있습니다.",
           "bad", "close"
         );
         elements.sentenceActionRow.hidden = false;

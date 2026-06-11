@@ -6941,6 +6941,29 @@
       scheduleSelectedTopicPracticeSessionSave();
       elements.userInput.focus();
     }
+    function returnToReadingMode(){
+      if(!state.active||!isCurrentSentenceAnswering())return;
+      finishSentenceRecording("auto");
+      stopSentencePlayback();
+      stopSpeaking();
+      state.continueMemorizeOnAdvance=false;
+      hideClozeRevealAnswers(false);
+      hideHint();
+      elements.sentenceCard.classList.remove("memorize","cloze-active","cloze-locked","answer-peek");
+      document.body.classList.remove("cloze-mode");
+      updateClozeAnswerToggleButton();
+      elements.sentenceActionRow.hidden=false;
+      elements.memorizeMsg.textContent=(state.currentStage==="cloze")
+        ? "문장을 다시 읽어보세요. 준비되면 '가리고 쓰기'로 빈칸을 채우세요."
+        : "문장을 다시 읽어보세요. 준비되면 '가리고 쓰기'를 누르세요.";
+      elements.userInput.disabled=true;
+      elements.checkButton.disabled=true;
+      elements.hintButton.disabled=true;
+      refreshSentenceActionButtons();
+      setFeedback("읽기 모드로 돌아왔습니다.","다음 문장도 읽기 모드로 시작합니다. '가리고 쓰기'를 누르면 다시 가립니다.","","note");
+      scheduleSelectedTopicPracticeSessionSave();
+      elements.memorizeBtn.focus();
+    }
     function revealSentence(){finishSentenceRecording("auto");stopSentencePlayback();stopSpeaking();hideClozeRevealAnswers(false);elements.sentenceCard.classList.remove("memorize","cloze-active","cloze-locked","answer-peek");document.body.classList.remove("cloze-mode");elements.sentenceActionRow.hidden=true;elements.memorizeMsg.textContent="";updateClozeAnswerToggleButton();updateReadButtonState();updateSentenceRecordingButtons();}
     function isCurrentSentenceAnswering(){
       return !!(state.active && !state.waitingForNext && (
@@ -6953,9 +6976,16 @@
     }
     function refreshSentenceActionButtons(){
       var controlsLocked = recordingState.isRecording || recordingState.loading;
+      var answering = isCurrentSentenceAnswering();
       elements.prevSentenceButton.disabled=!state.active||state.currentIndex<=0||controlsLocked;
       elements.skipSentenceButton.disabled=!state.active||controlsLocked;
-      elements.memorizeBtn.disabled=!state.active||state.waitingForNext||isCurrentSentenceAnswering()||controlsLocked;
+      elements.memorizeBtn.disabled=!state.active||state.waitingForNext||controlsLocked;
+      elements.memorizeBtn.innerHTML=answering
+        ? '다시 읽기 <span class="shortcut-hint">Space</span>'
+        : '가리고 쓰기 <span class="shortcut-hint">Space</span>';
+      elements.memorizeBtn.title=answering
+        ? "문장을 가리지 않은 읽기 모드로 돌아갑니다. 다음 문장도 읽기 모드로 시작합니다."
+        : "";
       updateReadButtonState();
       updateStageToggleButton();
       updateClozeAnswerToggleButton();
@@ -7002,6 +7032,7 @@
             elements.hintButton.disabled = true;
             elements.memorizeMsg.textContent = "새로운 빈칸으로 다시 입력한 뒤 채점하세요. (" + state.clozeData.blanks.length + "개)";
             setFeedback("다시 도전하세요.", "빈칸 위치를 새로 바꿨습니다. 처음부터 다시 채워 보세요.", "", "write");
+            refreshSentenceActionButtons();
             scheduleSelectedTopicPracticeSessionSave();
             var rerolledInputs = getClozeInputs();
             if (rerolledInputs[0]) rerolledInputs[0].focus();
@@ -7021,6 +7052,7 @@
         elements.checkButton.disabled = false;
         elements.memorizeMsg.textContent = "빈칸에 직접 입력한 뒤 채점하세요. (" + state.clozeData.blanks.length + "개)";
         setFeedback("다시 도전하세요.", "틀린 빈칸만 다시 채워 보세요.", "", "write");
+        refreshSentenceActionButtons();
         scheduleSelectedTopicPracticeSessionSave();
         (firstWrong || inputs[0]).focus();
         return;
@@ -7383,6 +7415,7 @@
         showDifficultyRow(cur.id);
         updateStageBadge();
         updateStageToggleButton();
+        refreshSentenceActionButtons();
         scheduleSelectedTopicPracticeSessionSave();
         elements.retryButton.focus();
       } else {
@@ -7514,7 +7547,8 @@
         skipCurrentSentence();return;
       }
       if(e.key===" "||e.code==="Space"){
-        hideAndWrite();
+        if(isCurrentSentenceAnswering())returnToReadingMode();
+        else hideAndWrite();
       }
     }
     function suppressShortcutKeyup(e){
@@ -7573,7 +7607,10 @@
     elements.playSentenceRecordingButton.addEventListener("click",playSentenceRecording);
     elements.deleteSentenceRecordingButton.addEventListener("click",deleteSentenceRecording);
     elements.readSpeedSelect.addEventListener("change",handleSpeechRateChange);
-    elements.memorizeBtn.addEventListener("click",hideAndWrite);
+    elements.memorizeBtn.addEventListener("click",function(){
+      if(isCurrentSentenceAnswering())returnToReadingMode();
+      else hideAndWrite();
+    });
     elements.targetSentence.addEventListener("click",function(e){
       var token = e.target.closest(".sentence-token");
       if (!token || !state.active) return;
@@ -7670,6 +7707,7 @@
     elements.celebrationClose.addEventListener("click",hideCelebration);
     elements.userInput.addEventListener("keydown",function(e){
       if(e.isComposing||e.keyCode===229)return;
+      if(e.key==="Escape"&&isCurrentSentenceAnswering()){e.preventDefault();returnToReadingMode();return;}
       if(e.key!=="Enter"||e.shiftKey||e.altKey||e.ctrlKey||e.metaKey)return;
       e.preventDefault();
       if(shouldBlockHeldEnter(e))return;
@@ -7681,6 +7719,7 @@
     elements.clozeDisplay.addEventListener("keydown",function(e){
       var t=e.target;if(!t||!t.classList||!t.classList.contains("cloze-input"))return;
       if(e.isComposing||e.keyCode===229)return;
+      if(e.key==="Escape"&&isCurrentSentenceAnswering()){e.preventDefault();returnToReadingMode();return;}
       if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
         e.preventDefault();
         if(shouldBlockHeldEnter(e))return;
